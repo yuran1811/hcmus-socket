@@ -52,6 +52,11 @@ class Client:
     def watch_download_list(self):
         while not self.exit_signal.is_set() and not self.watch_signal.is_set():
             self.update_status()
+
+            download_thread = Thread(target=self.downloads)
+            download_thread.start()
+            download_thread.join()
+
             sleep(self.interval)
 
     def downloads(self):
@@ -68,6 +73,8 @@ class Client:
                     item for item in self.status.items() if item[1][1] is False
                 ]
             ]
+            if len(queue):
+                print()
 
             while not self.exit_signal.is_set():
                 if len(queue) == 0 or all([prior[1] for prior in self.status.values()]):
@@ -133,10 +140,10 @@ class Client:
             self.client.connect(ADDR)
             console_log(LogType.INFO, "Connected to the server!")
 
-            Thread(target=self.watch_download_list, daemon=True).start()
-
             self.handle_fetch()
             self.update_status()
+
+            Thread(target=self.watch_download_list, daemon=True).start()
 
             while not self.exit_signal.is_set():
                 cmd_req = input("Enter command: ").strip()
@@ -153,6 +160,7 @@ class Client:
                     show_help()
                 else:
                     console_log(LogType.ERR, "Invalid command!")
+
         except KeyboardInterrupt:
             console_log(LogType.INFO, f"Client is shutting down...")
         except Exception as e:
