@@ -2,17 +2,22 @@
 
 ## Libs
 
+### Standard libs
+
+- `argparse` - parse command line arguments
 - `enum` - usage of enum type
 - `json` - data serialization
 - `os` - for file operations
-- `re` - regular expression
 - `socket` - for creating a socket server
 - `sys` - rendering progress bar
 - `threading` - for handling multiple clients
 - `time` - time operations
 - `typing` - usage of generic type
 
-- `dotenv` - load configs from .env file
+### External libs
+
+- `python-dotenv` - load configs from .env file
+- `regex` - regular expression
 - `watchdog` - watching file changes
 
 ## Usage
@@ -27,18 +32,22 @@ pip install -r requirements.txt
 
 ```bash
 py server.py
+# or
+python3 server.py
 ```
 
 - Run the client
 
 ```bash
 py client.py
+# or
+python3 client.py
 ```
 
 ## Contributors
 
-- Ngo Nguyen The Khoa
-- Hinh Diem Xuan
+- Ngo Nguyen The Khoa, [yuran1811](https://github.com/yuran1811)
+- Hinh Diem Xuan, [HDXuan15](https://github.com/HDXuan15)
 
 ## Docs
 

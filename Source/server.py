@@ -1,5 +1,6 @@
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, gethostbyname, gethostname
 from threading import Thread, Event
+from argparse import ArgumentParser
 
 from classes.download_manager import ServerDownloadManager
 from shared.envs import (
@@ -12,6 +13,7 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import get_command
+from utils.args import with_gui_arg
 from utils.logger import LogType, local_log, console_log
 from utils.files import get_resource_list_data, get_asset_size
 from utils.resources_watching import start_watching
@@ -185,5 +187,26 @@ class Server:
             self.shutdown_server()
 
 
+class GUIServer(Server):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        pass
+
+
 if __name__ == "__main__":
-    Server().run()
+    parser = ArgumentParser(
+        prog="Socket Server",
+        description="A simple socket server for file downloading",
+    )
+    with_gui_arg(parser)
+    args = parser.parse_args()
+
+    use_gui = args.gui
+    if use_gui:
+        print("--gui detected, using GUI version")
+        GUIServer().run()
+    else:
+        print("--gui not detected, using console version")
+        Server().run()

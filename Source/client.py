@@ -1,6 +1,7 @@
 from socket import socket, AF_INET, SOCK_STREAM
 from threading import Event, Thread
 from time import sleep
+from argparse import ArgumentParser
 
 from classes.download_manager import ClientDownloadManager
 from shared.envs import (
@@ -12,6 +13,7 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import show_help, get_command
+from utils.args import with_gui_arg
 from utils.logger import LogType, console_log
 from utils.files import render_file_list, extract_download_input
 
@@ -176,5 +178,26 @@ class Client:
             console_log(LogType.INFO, f"Client stopped!")
 
 
+class GUIClient(Client):
+    def __init__(self):
+        super().__init__()
+
+    def run(self):
+        pass
+
+
 if __name__ == "__main__":
-    Client().run()
+    parser = ArgumentParser(
+        prog="Socket Client",
+        description="A simple socket client for file downloading",
+    )
+    with_gui_arg(parser)
+    args = parser.parse_args()
+
+    use_gui = args.gui
+    if use_gui:
+        print("--gui detected, using GUI version")
+        GUIClient().run()
+    else:
+        print("--gui not detected, using console version")
+        Client().run()
