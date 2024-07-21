@@ -12,6 +12,10 @@
   <img alt="Commitizen friendly" src="https://img.shields.io/badge/commitizen-friendly-brightgreen.svg">
 </p>
 
+## Usage
+
+- Read the [documentation](./Source/readme.md) for more information
+
 ## Releases
 
 - See the latest version [here](https://github.com/yuran1811/hcmus-socket/releases)
