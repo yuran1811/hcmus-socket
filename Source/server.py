@@ -1,5 +1,5 @@
-from threading import Thread, Event
 from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, gethostbyname, gethostname
+from threading import Thread, Event
 
 from classes.download_manager import ServerDownloadManager
 from shared.envs import (
@@ -38,22 +38,48 @@ class Server:
     def client_log(self, type: str, addr: str, msg: str):
         console_log(type, f"[CLIENT] - {addr}: {msg}")
 
-    def close_connection(self, conn: socket, addr: str):
-        try:
-            if not conn or not addr:
-                return
+    def send_resource_list(self, conn: socket):
+        list_data: dict = get_resource_list_data()
+        available_files = "\n".join(
+            [
+                f"{DAT_SIGNAL['list']}{SEPARATOR}{filename}{SEPARATOR}{fileinfo[0]}{SEPARATOR}"
+                for filename, fileinfo in list_data.items()
+            ]
+        )
 
-            conn.send(STATUS_SIGNAL["terminate"].encode())
-            conn.shutdown(SHUT_RDWR)
-            conn.close()
+        conn.sendall(available_files.encode(ENCODING_FORMAT))
 
-            del self.addresses[conn]
+        self.send_status_signal(conn, "success")
 
-            self.client_log(LogType.INFO, addr, "Connection closed!")
-        except Exception as e:
-            self.client_log(
-                LogType.ERR, addr, f"An error occurs when closing connection::{e}"
-            )
+    def send_files(self, conn: socket):
+        self.send_status_signal(conn, "accept")
+
+        while not self.exit_signal.is_set():
+            msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
+            if not msg or msg in [
+                STATUS_SIGNAL["success"],
+                STATUS_SIGNAL["terminate"],
+                STATUS_SIGNAL["interrupt"],
+            ]:
+                break
+
+            _, filename, prior = msg.split(SEPARATOR)[:3]
+
+            if filename not in self.download_manager.queue:
+                self.download_manager.add_download(
+                    filename=filename,
+                    chunk_sz=int(prior),
+                    tot=get_asset_size(filename),
+                )
+
+            try:
+                bytes_to_send = self.download_manager.download(filename)
+                conn.sendall(bytes_to_send)
+            except StopIteration:
+                self.send_dat_signal(conn, "done")
+                break
+
+        self.send_status_signal(conn, "success")
 
     def handle_client(self, conn: socket, addr: str):
         try:
@@ -72,47 +98,9 @@ class Server:
                     self.close_connection(conn, addr)
                     break
                 elif cmd == "list":
-                    list_data: dict = get_resource_list_data()
-                    available_files = "\n".join(
-                        [
-                            f"{DAT_SIGNAL['list']}{SEPARATOR}{filename}{SEPARATOR}{fileinfo[0]}{SEPARATOR}"
-                            for filename, fileinfo in list_data.items()
-                        ]
-                    )
-
-                    conn.sendall(available_files.encode(ENCODING_FORMAT))
-
-                    self.send_status_signal(conn, "success")
-                    # conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
+                    self.send_resource_list(conn)
                 elif cmd == "get":
-                    self.send_status_signal(conn, "accept")
-
-                    while not self.exit_signal.is_set():
-                        msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
-                        if not msg or msg in [
-                            STATUS_SIGNAL["success"],
-                            STATUS_SIGNAL["terminate"],
-                            STATUS_SIGNAL["interrupt"],
-                        ]:
-                            break
-
-                        _, filename, prior = msg.split(SEPARATOR)[:3]
-
-                        if filename not in self.download_manager.download_list:
-                            self.download_manager.add_download(
-                                filename=filename,
-                                chunk_sz=int(prior),
-                                tot=get_asset_size(filename),
-                            )
-
-                        try:
-                            bytes_to_send = self.download_manager.download(filename)
-                            conn.sendall(bytes_to_send)
-                        except StopIteration:
-                            self.send_dat_signal(conn, "done")
-                            break
-
-                    self.send_status_signal(conn, "success")
+                    self.send_files(conn)
                 else:
                     self.send_status_signal(conn, "invalid")
         except Exception as e:
@@ -121,6 +109,23 @@ class Server:
             )
         finally:
             del self.download_manager
+
+    def close_connection(self, conn: socket, addr: str):
+        try:
+            if not conn or not addr:
+                return
+
+            conn.send(STATUS_SIGNAL["terminate"].encode())
+            conn.shutdown(SHUT_RDWR)
+            conn.close()
+
+            del self.addresses[conn]
+
+            self.client_log(LogType.INFO, addr, "Connection closed!")
+        except Exception as e:
+            self.client_log(
+                LogType.ERR, addr, f"An error occurs when closing connection::{e}"
+            )
 
     def start_server(self):
         try:
@@ -154,7 +159,7 @@ class Server:
                 self.server.send(STATUS_SIGNAL["terminate"].encode())
                 conn.close()
 
-            self.server.shutdown(SHUT_RDWR)
+            # self.server.shutdown(SHUT_RDWR)
 
         self.server.close()
         console_log(LogType.INFO, "Server stopped!")

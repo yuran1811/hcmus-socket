@@ -8,7 +8,6 @@ from shared.envs import (
     MAX_BUF_SIZE,
     ENCODING_FORMAT,
     SEPARATOR,
-    CLIENT_DIR_PATH,
     CLIENT_REQUEST_INPUT,
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
@@ -116,7 +115,6 @@ class Client:
                 STATUS_SIGNAL["terminate"],
                 STATUS_SIGNAL["interrupt"],
             ]:
-                # self.send_dat_signal("done")
                 break
 
             for line in msg.split("\n"):

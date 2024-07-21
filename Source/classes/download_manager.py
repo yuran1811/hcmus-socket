@@ -119,20 +119,10 @@ class DownloadManager(Generic[T]):
         self.exists: set[str] = set()
         self.duplicates: set[str] = set()
 
-        self.add_list(files)
+        self.add_download_list(files)
 
     def is_all_done(self) -> bool:
         return all(f.is_done() for f in self.queue.values())
-
-    def add_list(self, files: list[tuple[str, int, int]]):
-        for filename, chunk_sz, tot in files:
-            self.resource_list[filename] = (chunk_sz, tot)
-
-            self.add_download(
-                filename=filename,
-                chunk_sz=chunk_sz,
-                tot=tot,
-            )
 
     def add_download(
         self,
@@ -160,6 +150,14 @@ class DownloadManager(Generic[T]):
             )
 
         self.queue[filename] = self.download_list[filename]
+
+    def add_download_list(self, files: list[tuple[str, int, int]]):
+        for filename, chunk_sz, tot in files:
+            self.add_download(
+                filename=filename,
+                chunk_sz=chunk_sz,
+                tot=tot,
+            )
 
     def finish(self):
         if not self.is_all_done():
