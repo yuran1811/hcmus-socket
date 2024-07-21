@@ -9,6 +9,7 @@ from shared.envs import (
     ENCODING_FORMAT,
     SEPARATOR,
     CLIENT_DIR_PATH,
+    CLIENT_REQUEST_INPUT,
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import show_help, get_command
@@ -41,7 +42,9 @@ class Client:
         self.download_manager.add_download(filename, chunk_sz, tot)
 
     def update_status(self):
-        with open(f"{CLIENT_DIR_PATH}/input.txt", "r") as f:
+        with open(CLIENT_REQUEST_INPUT, "a") as f:
+            pass
+        with open(CLIENT_REQUEST_INPUT, "r") as f:
             for line in f:
                 filename, chunk_sz = extract_download_input(line)
                 if filename in self.resources.keys() and filename not in self.status:

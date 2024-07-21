@@ -1,3 +1,0 @@
-[ERR] - [start_server] - An error occurs when handling client: [WinError 10038] An operation was attempted on something that is not a socket
-[ERR] - [start_server] - An error occurs when handling client: [WinError 10038] An operation was attempted on something that is not a socket
-[ERR] - [start_server] - An error occurs when handling client: [WinError 10038] An operation was attempted on something that is not a socket

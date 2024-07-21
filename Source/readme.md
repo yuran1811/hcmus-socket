@@ -42,6 +42,6 @@ py client.py
 
 ## Docs
 
-- [Refs](./refs.md)
-- [Todo](./todo.md)
+- [Refs](./md/refs.md)
+- [Todo](./md/todo.md)
 - [UML](../diagrams.mdj)

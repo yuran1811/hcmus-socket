@@ -11,11 +11,13 @@ from .base import get_prior_weight, print_divider
 
 
 def render_file_list(files: list[tuple[str, int]]):
+    print()
     print_divider()
     print("Available files:")
     for i, f in enumerate(files):
         print(f"\t{i+1}. {f[0]} - {convert_file_size(f[1])}")
     print_divider()
+    print()
 
 
 def get_asset_size(filename: str):
@@ -23,6 +25,7 @@ def get_asset_size(filename: str):
 
 
 def get_resource_list():
+    os.makedirs(SERVER_RESOURCES_PATH, exist_ok=True)
     return os.listdir(SERVER_RESOURCES_PATH)
 
 
@@ -32,6 +35,7 @@ def get_resource_path(filename: str):
 
 
 def get_downloaded_list():
+    os.makedirs(CLIENT_DOWNLOADS_PATH, exist_ok=True)
     return os.listdir(CLIENT_DOWNLOADS_PATH)
 
 

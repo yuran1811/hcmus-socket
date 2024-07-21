@@ -1,10 +1,5 @@
 from threading import Thread, Event
-from socket import (
-    socket,
-    AF_INET,
-    SOCK_STREAM,
-    SHUT_RDWR,
-)
+from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, gethostbyname, gethostname
 
 from classes.download_manager import ServerDownloadManager
 from shared.envs import (
@@ -131,6 +126,7 @@ class Server:
         try:
             self.server.listen(BACKLOG)
             console_log(LogType.INFO, f"Server has started at {ADDR}")
+            console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}")
 
             while not self.exit_signal.is_set():
                 if not self.server:
@@ -143,7 +139,8 @@ class Server:
         except Exception as e:
             local_log(
                 LogType.ERR,
-                f"[start_server] - An error occurs when handling client: {e}",
+                message=f"[start_server] - An error occurs when handling client: {e}",
+                path="server.log",
             )
 
     def shutdown_server(self):

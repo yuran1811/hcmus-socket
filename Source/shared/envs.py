@@ -26,3 +26,6 @@ CLIENT_DIR_PATH = path.join(APP_ROOT_PATH, "client")
 CLIENT_DOWNLOADS_PATH = getenv("CLIENT_DOWNLOADS_PATH") or path.join(
     CLIENT_DIR_PATH, "downloads"
 )
+CLIENT_REQUEST_INPUT = getenv("CLIENT_REQUEST_INPUT") or path.join(
+    CLIENT_DIR_PATH, "input.txt"
+)

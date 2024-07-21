@@ -1,2 +1,0 @@
-rose1.jpg    	HIGH
-rose2.jpg   	CRIT

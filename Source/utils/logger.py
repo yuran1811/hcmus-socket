@@ -14,8 +14,8 @@ def console_log(log_type: LogType, message: str):
         print(f"[i] - {message}")
 
 
-def local_log(log_type: LogType, message: str):
-    with open("log.txt", "a") as f:
+def local_log(log_type: LogType, *, message: str, path: str):
+    with open(path, "a") as f:
         if log_type in LogType:
             f.write(f"[{log_type.name}] - {message}\n")
         else:

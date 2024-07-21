@@ -23,5 +23,6 @@ PRIOR_MAPPING = {
     "NLIM": -1,
     "CRIT": 2**5,
     "HIGH": 2**2,
+    "MIDD": 2,
     "NORM": 1,
 }
