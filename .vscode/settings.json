@@ -9,7 +9,7 @@
     "**/*.fdb_latexmk": true,
     "**/*.fls": true,
     "**/*.gz": true,
-    "**/*.log": true,
+    "**/*.log": false,
     "**/*.lol": true,
     "**/*.out": true,
     "**/*.pyg": true,
