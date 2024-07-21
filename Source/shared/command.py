@@ -28,8 +28,10 @@ def get_command(command: str):
 
 
 def show_help():
+    print()
     print_divider()
     print("Available commands:")
     for key in COMMANDS:
         print(f"\t{', '.join(COMMANDS[key]['alias'])}\t: {COMMANDS[key]['desc']}")
     print_divider()
+    print()
