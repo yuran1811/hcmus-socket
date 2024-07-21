@@ -12,9 +12,9 @@ from utils.files import convert_file_size, extract_download_input
 
 class UtilsTest(TestCase):
     def test_get_prior_weight(self):
-        self.assertEqual(get_prior_weight("CRIT"), 2**5)
-        self.assertEqual(get_prior_weight("HIGH"), 2**2)
-        self.assertEqual(get_prior_weight("MIDD"), 2)
+        self.assertEqual(get_prior_weight("CRIT"), 2**6)
+        self.assertEqual(get_prior_weight("HIGH"), 2**4)
+        self.assertEqual(get_prior_weight("MIDD"), 2**2)
         self.assertEqual(get_prior_weight("NORM"), 1)
 
         self.assertEqual(get_prior_weight("UNKNOWN"), 1)
