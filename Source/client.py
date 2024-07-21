@@ -69,7 +69,6 @@ class Client:
                     item for item in self.status.items() if item[1][1] is False
                 ]
             ]
-            print(queue)
 
             while not self.exit_signal.is_set():
                 if len(queue) == 0 or all([prior[1] for prior in self.status.values()]):

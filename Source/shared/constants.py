@@ -21,8 +21,8 @@ DAT_SIGNAL = {
 
 PRIOR_MAPPING = {
     "NLIM": -1,
-    "CRIT": 2**5,
-    "HIGH": 2**2,
-    "MIDD": 2,
+    "CRIT": 2**6,
+    "HIGH": 2**4,
+    "MIDD": 2**2,
     "NORM": 1,
 }
