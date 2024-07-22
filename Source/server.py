@@ -23,7 +23,9 @@ class Server:
     def __init__(self):
         self.resources_path = SERVER_RESOURCES_PATH
 
+        self.download_manager: dict[socket, ServerDownloadManager] = {}
         self.addresses: dict[socket, str] = {}
+        self.resources: dict = {}
 
         self.exit_signal = Event()
         self.watching_thread: Thread = None
@@ -41,11 +43,11 @@ class Server:
         console_log(type, f"[CLIENT] - {addr}: {msg}")
 
     def send_resource_list(self, conn: socket):
-        list_data: dict = get_resource_list_data()
+        self.resources = get_resource_list_data()
         available_files = "\n".join(
             [
                 f"{DAT_SIGNAL['list']}{SEPARATOR}{filename}{SEPARATOR}{fileinfo[0]}{SEPARATOR}"
-                for filename, fileinfo in list_data.items()
+                for filename, fileinfo in self.resources.items()
             ]
         )
 
@@ -67,15 +69,15 @@ class Server:
 
             _, filename, prior = msg.split(SEPARATOR)[:3]
 
-            if filename not in self.download_manager.queue:
-                self.download_manager.add_download(
+            if filename not in self.download_manager[conn].queue:
+                self.download_manager[conn].add_download(
                     filename=filename,
                     chunk_sz=int(prior),
                     tot=get_asset_size(filename),
                 )
 
             try:
-                bytes_to_send = self.download_manager.download(filename)
+                bytes_to_send = self.download_manager[conn].download(filename)
                 conn.sendall(bytes_to_send)
             except StopIteration:
                 self.send_dat_signal(conn, "done")
@@ -90,7 +92,7 @@ class Server:
 
             self.client_log(LogType.INFO, addr, "Connection established!")
 
-            self.download_manager = ServerDownloadManager([])
+            self.download_manager[conn] = ServerDownloadManager([])
 
             while not self.exit_signal.is_set():
                 msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
@@ -110,7 +112,7 @@ class Server:
                 LogType.ERR, addr, f"An error occurs when handling request::{e}"
             )
         finally:
-            del self.download_manager
+            del self.download_manager[conn]
 
     def close_connection(self, conn: socket, addr: str):
         try:
