@@ -16,7 +16,7 @@
 
 ## Misc
 
-- [ ]: report
+- [x]: report
 
 - Additional features
   - [x]: cache for downloaded files
