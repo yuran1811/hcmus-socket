@@ -1,9 +1,8 @@
 from socket import socket, AF_INET, SOCK_STREAM, error as SocketError
 from threading import Event, Thread
 from time import sleep
-from argparse import ArgumentParser
 
-from classes.download_manager import ClientDownloadManager
+from classes import ClientDownloadManager
 from shared.envs import (
     ADDR,
     MAX_BUF_SIZE,
@@ -13,14 +12,15 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import show_help, get_command
-from utils.args import with_gui_arg
 from utils.logger import LogType, console_log
 from utils.files import render_file_list, extract_download_input
+from utils.args import *
+from utils.gui import *
 
 
 class Client:
     def __init__(self):
-        self.interval = 2
+        self.interval = 1
 
         self.download_manager = ClientDownloadManager([])
 
@@ -29,6 +29,9 @@ class Client:
 
         self.exit_signal = Event()
         self.watch_signal = Event()
+        self.is_shutdown = False
+
+        self.watch_thread = Thread(target=self.watch_download_list, daemon=False)
 
         self.client = socket(AF_INET, SOCK_STREAM)
 
@@ -43,8 +46,9 @@ class Client:
         self.download_manager.add_download(filename, chunk_sz, tot)
 
     def update_status(self):
-        with open(CLIENT_REQUEST_INPUT, "a") as f:
-            pass
+        if self.is_shutdown or self.exit_signal.is_set() or self.watch_signal.is_set():
+            return
+
         with open(CLIENT_REQUEST_INPUT, "r") as f:
             for line in f:
                 filename, chunk_sz = extract_download_input(line)
@@ -52,7 +56,11 @@ class Client:
                     self.status[filename] = (chunk_sz, False)
 
     def watch_download_list(self):
-        while not self.exit_signal.is_set() and not self.watch_signal.is_set():
+        while (
+            not self.is_shutdown
+            and not self.exit_signal.is_set()
+            and not self.watch_signal.is_set()
+        ):
             self.update_status()
 
             download_thread = Thread(target=self.downloads)
@@ -67,11 +75,10 @@ class Client:
 
             accepted = self.client.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
             if accepted != STATUS_SIGNAL["accept"]:
-                return
+                raise Exception("Server is not ready to download!")
 
             if accepted == STATUS_SIGNAL["terminate"]:
-                self.close_connection()
-                return
+                raise SocketError("Server is terminated!")
 
             queue = [
                 (filename, prior[0])
@@ -82,7 +89,7 @@ class Client:
             if len(queue):
                 print()
 
-            while not self.exit_signal.is_set():
+            while not self.is_shutdown and not self.exit_signal.is_set():
                 if len(queue) == 0 or all([prior[1] for prior in self.status.values()]):
                     break
 
@@ -101,8 +108,7 @@ class Client:
                         break
 
                     if data == STATUS_SIGNAL["terminate"].encode(ENCODING_FORMAT):
-                        self.close_connection()
-                        return
+                        raise Exception("Server is terminated!")
 
                     if filename not in self.download_manager.download_list:
                         self.download_manager.add_download(
@@ -153,11 +159,12 @@ class Client:
         self.watch_signal.set()
 
         if self.client:
-            if not terminate:
+            if not terminate and not self.is_shutdown:
                 self.client.send("quit".encode(ENCODING_FORMAT))
 
             self.client.close()
 
+        self.is_shutdown = True
         console_log(LogType.INFO, f"Client stopped!")
 
     def run(self):
@@ -170,9 +177,13 @@ class Client:
             self.handle_fetch()
             self.update_status()
 
-            Thread(target=self.watch_download_list, daemon=True).start()
+            self.watch_thread.start()
 
-            while not self.exit_signal.is_set():
+            while (
+                not self.is_shutdown
+                and not self.__exception
+                and not self.exit_signal.is_set()
+            ):
                 cmd_req = input("Enter command: ").strip()
                 command = get_command(cmd_req.lower())
 
@@ -186,8 +197,9 @@ class Client:
                 elif command == "help":
                     show_help()
                 else:
+                    # if self.__exception or self.exit_signal.is_set():
+                    #     raise Exception("Got exception")
                     console_log(LogType.ERR, "Invalid command!")
-
         except KeyboardInterrupt:
             console_log(LogType.INFO, f"Client is shutting down...")
             self.__exception = KeyboardInterrupt
@@ -207,17 +219,15 @@ class GUIClient(Client):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
+    args = parse_args(
         prog="Socket Client",
-        description="A simple socket client for file downloading",
+        desc="A simple socket client for downloading files",
+        wrappers=[with_gui_arg, with_part1_arg],
     )
-    with_gui_arg(parser)
-    args = parser.parse_args()
 
-    use_gui = args.gui
-    if use_gui:
+    if args.gui:
         print("--gui detected, using GUI version")
         GUIClient().run()
     else:
-        print("--gui not detected, using console version")
+        print("--gui 'not' detected, using console version")
         Client().run()

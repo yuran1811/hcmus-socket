@@ -1,11 +1,18 @@
-from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, gethostbyname, gethostname
+from socket import (
+    socket,
+    AF_INET,
+    SOCK_STREAM,
+    SHUT_RDWR,
+    error as SocketError,
+    gethostname,
+    gethostbyname,
+)
 from threading import Thread, Event
-from argparse import ArgumentParser
-from datetime import datetime
+from time import sleep
 
 import customtkinter as tk
 
-from classes.download_manager import ServerDownloadManager
+from classes import ServerDownloadManager
 from shared.envs import (
     ADDR,
     BACKLOG,
@@ -16,14 +23,15 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import get_command
-from utils.args import with_gui_arg
-from utils.logger import LogType, local_log, console_log, raw_log
+from utils.base import get_timestamp
+from utils.logger import LogType, raw_log, local_log, console_log
 from utils.files import get_resource_list_data, get_asset_size, convert_file_size
 from utils.resources_watching import start_watching
+from utils.args import *
 from utils.gui import *
 
 
-class Server:
+class BaseServer:
     def __init__(self):
         self.resources_path = SERVER_RESOURCES_PATH
 
@@ -33,6 +41,7 @@ class Server:
 
         self.exit_signal = Event()
         self.watching_thread: Thread = None
+        self.is_shutdown = False
 
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind(ADDR)
@@ -62,16 +71,20 @@ class Server:
     def send_files(self, conn: socket):
         self.send_status_signal(conn, "accept")
 
-        while not self.exit_signal.is_set():
+        while not self.exit_signal.is_set() and not self.is_shutdown:
             msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
             if not msg or msg in [
+                "quit",
                 STATUS_SIGNAL["success"],
                 STATUS_SIGNAL["terminate"],
                 STATUS_SIGNAL["interrupt"],
             ]:
                 break
 
-            _, filename, prior = msg.split(SEPARATOR)[:3]
+            if len(msg_plit := msg.split(SEPARATOR)) < 3:
+                continue
+
+            _, filename, prior = msg_plit[:3]
 
             if filename not in self.download_manager[conn].queue:
                 self.download_manager[conn].add_download(
@@ -98,7 +111,7 @@ class Server:
 
             self.download_manager[conn] = ServerDownloadManager([])
 
-            while not self.exit_signal.is_set():
+            while not self.exit_signal.is_set() and not self.is_shutdown:
                 msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
                 cmd = get_command(msg)
 
@@ -111,6 +124,8 @@ class Server:
                     self.send_files(conn)
                 else:
                     self.send_status_signal(conn, "invalid")
+        except SocketError:
+            self.close_connection(conn, addr)
         except Exception as e:
             self.client_log(
                 LogType.ERR, addr, f"An error occurs when handling request::{e}"
@@ -134,6 +149,8 @@ class Server:
             del self.addresses[conn]
 
             self.client_log(LogType.INFO, addr, "Connection closed!")
+        except SocketError:
+            self.client_log(LogType.ERR, addr, "Connection is lost!")
         except Exception as e:
             self.client_log(
                 LogType.ERR, addr, f"An error occurs when closing connection::{e}"
@@ -171,9 +188,11 @@ class Server:
                 self.send_status_signal(conn, "terminate")
                 conn.close()
 
+            self.addresses.clear()
             self.server.shutdown(SHUT_RDWR)
 
         self.server.close()
+        self.is_shutdown = True
         console_log(LogType.INFO, "Server stopped!")
 
     def pipe_res_watching_thread(self):
@@ -187,14 +206,40 @@ class Server:
         )
         self.watching_thread.start()
 
+
+class Server(BaseServer):
+    def __init__(self):
+        super().__init__()
+
+    def start_server(self):
+        try:
+            self.server.listen(BACKLOG)
+            console_log(LogType.INFO, f"Server has started at {ADDR}")
+            console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}\n")
+
+            while not self.exit_signal.is_set() and not self.is_shutdown:
+                if not self.server:
+                    continue
+
+                conn, addr = self.server.accept()
+                self.addresses[conn] = addr
+
+                Thread(target=self.handle_client, args=(conn, addr)).start()
+        except Exception as e:
+            local_log(
+                LogType.ERR,
+                message=f"[start_server] - An error occurs when handling client: {e}",
+                path="server.log",
+            )
+
     def run(self):
         try:
             self.pipe_res_watching_thread()
 
             Thread(target=self.start_server, daemon=True).start()
 
-            while not self.exit_signal.is_set():
-                pass
+            while not self.exit_signal.is_set() and not self.is_shutdown:
+                sleep(1)
         except KeyboardInterrupt:
             console_log(LogType.INFO, "Server is shutting down...")
         except Exception as e:
@@ -398,9 +443,9 @@ class GUIServer(Server):
             self.root.mainloop()
 
         except KeyboardInterrupt:
-            console_log(LogType.INFO, "Server is shutting down...")
+            console_log(LogType.INFO, "GUIServer is shutting down...")
         except Exception as e:
-            console_log(LogType.ERR, f"An error occurs when running server: {e}")
+            console_log(LogType.ERR, f"An error occurs when running gui server: {e}")
         finally:
             self.shutdown_server()
 
@@ -408,17 +453,15 @@ class GUIServer(Server):
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
+    args = parse_args(
         prog="Socket Server",
-        description="A simple socket server for file downloading",
+        desc="A simple socket server for downloading files",
+        wrappers=[with_gui_arg, with_part1_arg],
     )
-    with_gui_arg(parser)
-    args = parser.parse_args()
 
-    use_gui = args.gui
-    if use_gui:
+    if args.gui:
         print("--gui detected, using GUI version\n")
         GUIServer().render()
     else:
-        print("--gui not detected, using console version\n")
+        print("--gui 'not' detected, using console version\n")
         Server().run()
