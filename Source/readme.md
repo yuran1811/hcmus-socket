@@ -8,6 +8,7 @@
 - `enum` - usage of enum type
 - `json` - data serialization
 - `os` - for file operations
+- `re` - usage of regex
 - `socket` - for creating a socket server
 - `sys` - rendering progress bar
 - `threading` - for handling multiple clients
@@ -16,8 +17,8 @@
 
 ### External libs
 
+- `customtkinter` - making gui
 - `python-dotenv` - load configs from .env file
-- `regex` - regular expression
 - `watchdog` - watching file changes
 
 ## Usage
