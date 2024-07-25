@@ -29,7 +29,7 @@ class Server:
 
         self.download_manager: dict[socket, ServerDownloadManager] = {}
         self.addresses: dict[socket, str] = {}
-        self.resources: dict = {}
+        self.resources: dict[str, tuple[int, str]] = {}
 
         self.exit_signal = Event()
         self.watching_thread: Thread = None
@@ -116,14 +116,18 @@ class Server:
                 LogType.ERR, addr, f"An error occurs when handling request::{e}"
             )
         finally:
-            del self.download_manager[conn]
+            try:
+                del self.addresses[conn]
+                del self.download_manager[conn]
+            except KeyError:
+                pass
 
     def close_connection(self, conn: socket, addr: str):
         try:
             if not conn or not addr:
                 return
 
-            conn.send(STATUS_SIGNAL["terminate"].encode())
+            self.send_status_signal(conn, "terminate")
             conn.shutdown(SHUT_RDWR)
             conn.close()
 
@@ -139,7 +143,7 @@ class Server:
         try:
             self.server.listen(BACKLOG)
             console_log(LogType.INFO, f"Server has started at {ADDR}")
-            console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}")
+            console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}\n")
 
             while not self.exit_signal.is_set():
                 if not self.server:
@@ -161,25 +165,31 @@ class Server:
 
         self.watching_thread.join()
 
-        if len(self.addresses.items()):
+        if len(self.addresses) > 0:
             for conn, addr in self.addresses.items():
                 console_log(LogType.INFO, f"Ensure closing connection from {addr}!")
-                self.server.send(STATUS_SIGNAL["terminate"].encode())
+                self.send_status_signal(conn, "terminate")
                 conn.close()
 
-            # self.server.shutdown(SHUT_RDWR)
+            self.server.shutdown(SHUT_RDWR)
 
         self.server.close()
         console_log(LogType.INFO, "Server stopped!")
 
+    def pipe_res_watching_thread(self):
+        if self.watching_thread:
+            return
+
+        self.watching_thread = Thread(
+            target=start_watching,
+            args=(self.resources_path, self.exit_signal),
+            daemon=False,
+        )
+        self.watching_thread.start()
+
     def run(self):
         try:
-            self.watching_thread = Thread(
-                target=start_watching,
-                args=(self.resources_path, self.exit_signal),
-                daemon=False,
-            )
-            self.watching_thread.start()
+            self.pipe_res_watching_thread()
 
             Thread(target=self.start_server, daemon=True).start()
 

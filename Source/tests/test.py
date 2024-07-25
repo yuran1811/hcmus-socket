@@ -42,10 +42,11 @@ class UtilsTest(TestCase):
             extract_download_input("file0.txt"), ("file0.txt", MAX_BUF_SIZE)
         )
         self.assertEqual(
-            extract_download_input("file1.txt 0 0 0"), ("file1.txt", MAX_BUF_SIZE)
+            extract_download_input("\t   file1.txt 0 0 0  \t\t"),
+            ("file1.txt", MAX_BUF_SIZE),
         )
         self.assertEqual(
-            extract_download_input("file2.txt  \t  "), ("file2.txt", MAX_BUF_SIZE)
+            extract_download_input(" \t\t file2.txt  \t  "), ("file2.txt", MAX_BUF_SIZE)
         )
 
         self.assertEqual(
