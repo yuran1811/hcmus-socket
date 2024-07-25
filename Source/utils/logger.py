@@ -7,11 +7,12 @@ class LogType(Enum):
     OK = 2
 
 
+def raw_log(log_type: LogType, message: str):
+    return f"[{log_type.name if log_type in LogType else "i"}] - {message}"
+
+
 def console_log(log_type: LogType, message: str):
-    if log_type in LogType:
-        print(f"[{log_type.name}] - {message}")
-    else:
-        print(f"[i] - {message}")
+    print(raw_log(log_type, message))
 
 
 def local_log(log_type: LogType, *, message: str, path: str):

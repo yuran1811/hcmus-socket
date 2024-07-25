@@ -36,12 +36,24 @@ py server.py
 python3 server.py
 ```
 
+- Run the server with gui
+
+```bash
+py server.py --gui
+```
+
 - Run the client
 
 ```bash
 py client.py
 # or
 python3 client.py
+```
+
+- Run the client with gui
+
+```bash
+py client.py --gui
 ```
 
 ## Contributors

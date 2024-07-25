@@ -68,7 +68,7 @@ def get_resource_list_data():
 
 
 def extract_download_input(line: str):
-    reg_list = re.split("[\\s\\t\\n]+", line)
+    reg_list = re.split("[\\s\\t\\n]+", line.strip())
 
     if len(reg_list) == 1:
         return reg_list[0], MAX_BUF_SIZE * get_prior_weight("NORM")
@@ -85,7 +85,7 @@ def get_to_download_list(res_list: dict[str, tuple[int, str]]):
         downloads: list[tuple[str, int, int]] = []
 
         for line in f:
-            filename, chunk_sz = extract_download_input(line)
+            filename, chunk_sz = extract_download_input(line.strip())
             if (filename not in res_list) or (filename == ""):
                 continue
             downloads.append((filename, chunk_sz, res_list[filename][0]))

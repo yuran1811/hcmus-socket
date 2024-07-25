@@ -22,7 +22,7 @@ def start_watching(path=SERVER_RESOURCES_PATH, exit_signal: threading.Event = No
         console_log(LogType.INFO, f"Created {path}!")
 
     update_resources_data()
-    console_log(LogType.INFO, f'Watching changes from "{path}"')
+    console_log(LogType.INFO, f'Watching changes from "{path}"\n')
 
     event_handler = MonitorFileSystemHandler(updater=update_resource_list)
 
