@@ -1,6 +1,7 @@
 **/__pycache__/
 Source/app/client/
 Source/app/server/*.json
+Source/app/server/resources
 
 *.gz
 *.log
