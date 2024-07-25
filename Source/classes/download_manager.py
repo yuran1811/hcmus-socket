@@ -28,6 +28,9 @@ class FileDownloader:
     def is_done(self) -> bool:
         return self.cur >= self.tot
 
+    def raw_progress(self):
+        return (self.cur, self.tot, self.cur / float(self.tot))
+
     def render_progress_bar(self, len: int = 20) -> None:
         percent = self.cur / float(self.tot)
         cur_len = int(percent * len)

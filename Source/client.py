@@ -1,4 +1,4 @@
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM, error as SocketError
 from threading import Event, Thread
 from time import sleep
 from argparse import ArgumentParser
@@ -69,6 +69,10 @@ class Client:
             if accepted != STATUS_SIGNAL["accept"]:
                 return
 
+            if accepted == STATUS_SIGNAL["terminate"]:
+                self.close_connection()
+                return
+
             queue = [
                 (filename, prior[0])
                 for filename, prior in [
@@ -96,6 +100,10 @@ class Client:
                     if not data:
                         break
 
+                    if data == STATUS_SIGNAL["terminate"].encode(ENCODING_FORMAT):
+                        self.close_connection()
+                        return
+
                     if filename not in self.download_manager.download_list:
                         self.download_manager.add_download(
                             filename=filename,
@@ -112,6 +120,9 @@ class Client:
 
             self.send_status_signal("success")
             self.client.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
+        except SocketError:
+            console_log(LogType.ERR, "Connection is lost!")
+            self.close_connection(True)
         except Exception as e:
             console_log(LogType.ERR, f"An error occurs when downloading: {e}")
 
@@ -137,7 +148,21 @@ class Client:
         self.fetch_list()
         render_file_list([item for item in self.resources.items()])
 
+    def close_connection(self, terminate: bool = False):
+        self.exit_signal.set()
+        self.watch_signal.set()
+
+        if self.client:
+            if not terminate:
+                self.client.send("quit".encode(ENCODING_FORMAT))
+
+            self.client.close()
+
+        console_log(LogType.INFO, f"Client stopped!")
+
     def run(self):
+        self.__exception = None
+
         try:
             self.client.connect(ADDR)
             console_log(LogType.INFO, "Connected to the server!")
@@ -165,17 +190,12 @@ class Client:
 
         except KeyboardInterrupt:
             console_log(LogType.INFO, f"Client is shutting down...")
+            self.__exception = KeyboardInterrupt
         except Exception as e:
             console_log(LogType.ERR, f"An error occurs when running: {e}")
+            self.__exception = e
         finally:
-            self.exit_signal.set()
-            self.watch_signal.set()
-
-            if self.client:
-                self.client.send("quit".encode())
-                self.client.close()
-
-            console_log(LogType.INFO, f"Client stopped!")
+            self.close_connection(isinstance(self.__exception, KeyboardInterrupt))
 
 
 class GUIClient(Client):
