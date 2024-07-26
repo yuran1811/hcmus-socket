@@ -105,6 +105,8 @@ class ServerFileDownloader(FileDownloader):
         with open(self.path, "rb") as f:
             while True:
                 data = f.read(self.chunk_sz)
+                self.cur += len(data)
+
                 if not data:
                     break
                 yield data

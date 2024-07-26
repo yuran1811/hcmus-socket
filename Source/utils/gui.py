@@ -96,11 +96,25 @@ class Section(tk.CTkScrollableFrame):
         self.checkbox = create_checkbox(self, text=text, **kwargs)
         self.checkbox.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
-    def add_progress_bar(self, *, row: int, col: int, **kwargs):
-        progress_bar = create_progress_bar(self, **kwargs)
+    def add_progress_bar(self, *, root, row: int, col: int, **kwargs):
+        progress_bar = create_progress_bar(root or self, **kwargs)
         progress_bar.grid(row=row, column=col, padx=10, pady=10, sticky="nsew")
 
-        self.progress_bars.append(progress_bar)
+        return progress_bar
+
+    def add_progress_bar_frame(self, *, label: str, row: int, col: int, **kwargs):
+        frame = create_frame(self)
+        frame.grid(row=row, column=col, pady=5, sticky="nsew")
+        frame.rowconfigure(0, weight=1)
+        frame.columnconfigure(0, weight=0)
+        frame.columnconfigure(1, weight=1)
+
+        create_label(frame, text=label).grid(
+            row=0, column=0, padx=(10, 0), sticky="nse"
+        )
+
+        bar = self.add_progress_bar(root=frame, row=0, col=1, **kwargs)
+        self.progress_bars.append((frame, bar))
 
     def add_text_box(self, **kwargs):
         self.text_box = create_text_box(self, **kwargs)

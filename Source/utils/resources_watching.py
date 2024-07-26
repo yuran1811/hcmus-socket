@@ -1,7 +1,7 @@
 import time, os, threading
 from watchdog.observers import Observer
 
-from classes.monitor_filesys import MonitorFileSystemHandler
+from classes import MonitorFileSystemHandler
 from shared.envs import SERVER_RESOURCES_PATH
 from .files import update_resources_data
 from .logger import console_log, LogType

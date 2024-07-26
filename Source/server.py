@@ -1,11 +1,18 @@
-from socket import socket, AF_INET, SOCK_STREAM, SHUT_RDWR, gethostbyname, gethostname
+from socket import (
+    socket,
+    AF_INET,
+    SOCK_STREAM,
+    SHUT_RDWR,
+    error as SocketError,
+    gethostname,
+    gethostbyname,
+)
 from threading import Thread, Event
-from argparse import ArgumentParser
-from datetime import datetime
+from time import sleep
 
 import customtkinter as tk
 
-from classes.download_manager import ServerDownloadManager
+from classes import ServerDownloadManager
 from shared.envs import (
     ADDR,
     BACKLOG,
@@ -16,14 +23,15 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
 from shared.command import get_command
-from utils.args import with_gui_arg
-from utils.logger import LogType, local_log, console_log, raw_log
+from utils.base import get_timestamp
+from utils.logger import LogType, raw_log, local_log, console_log
 from utils.files import get_resource_list_data, get_asset_size, convert_file_size
 from utils.resources_watching import start_watching
+from utils.args import *
 from utils.gui import *
 
 
-class Server:
+class BaseServer:
     def __init__(self):
         self.resources_path = SERVER_RESOURCES_PATH
 
@@ -33,6 +41,7 @@ class Server:
 
         self.exit_signal = Event()
         self.watching_thread: Thread = None
+        self.is_shutdown = False
 
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind(ADDR)
@@ -62,16 +71,20 @@ class Server:
     def send_files(self, conn: socket):
         self.send_status_signal(conn, "accept")
 
-        while not self.exit_signal.is_set():
+        while not self.exit_signal.is_set() and not self.is_shutdown:
             msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
             if not msg or msg in [
+                "quit",
                 STATUS_SIGNAL["success"],
                 STATUS_SIGNAL["terminate"],
                 STATUS_SIGNAL["interrupt"],
             ]:
                 break
 
-            _, filename, prior = msg.split(SEPARATOR)[:3]
+            if len(msg_plit := msg.split(SEPARATOR)) < 3:
+                continue
+
+            _, filename, prior = msg_plit[:3]
 
             if filename not in self.download_manager[conn].queue:
                 self.download_manager[conn].add_download(
@@ -98,7 +111,7 @@ class Server:
 
             self.download_manager[conn] = ServerDownloadManager([])
 
-            while not self.exit_signal.is_set():
+            while not self.exit_signal.is_set() and not self.is_shutdown:
                 msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
                 cmd = get_command(msg)
 
@@ -111,6 +124,8 @@ class Server:
                     self.send_files(conn)
                 else:
                     self.send_status_signal(conn, "invalid")
+        except SocketError:
+            self.close_connection(conn, addr)
         except Exception as e:
             self.client_log(
                 LogType.ERR, addr, f"An error occurs when handling request::{e}"
@@ -134,10 +149,46 @@ class Server:
             del self.addresses[conn]
 
             self.client_log(LogType.INFO, addr, "Connection closed!")
+        except SocketError:
+            self.client_log(LogType.ERR, addr, "Connection is lost!")
         except Exception as e:
             self.client_log(
                 LogType.ERR, addr, f"An error occurs when closing connection::{e}"
             )
+
+    def shutdown_server(self):
+        self.exit_signal.set()
+
+        self.watching_thread.join()
+
+        if len(self.addresses) > 0:
+            for conn, addr in self.addresses.items():
+                console_log(LogType.INFO, f"Ensure closing connection from {addr}!")
+                self.send_status_signal(conn, "terminate")
+                conn.close()
+
+            self.addresses.clear()
+            self.server.shutdown(SHUT_RDWR)
+
+        self.server.close()
+        self.is_shutdown = True
+        console_log(LogType.INFO, "Server stopped!")
+
+    def pipe_res_watching_thread(self):
+        if self.watching_thread:
+            return
+
+        self.watching_thread = Thread(
+            target=start_watching,
+            args=(self.resources_path, self.exit_signal),
+            daemon=False,
+        )
+        self.watching_thread.start()
+
+
+class Server(BaseServer):
+    def __init__(self):
+        super().__init__()
 
     def start_server(self):
         try:
@@ -145,7 +196,7 @@ class Server:
             console_log(LogType.INFO, f"Server has started at {ADDR}")
             console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}\n")
 
-            while not self.exit_signal.is_set():
+            while not self.exit_signal.is_set() and not self.is_shutdown:
                 if not self.server:
                     continue
 
@@ -160,41 +211,14 @@ class Server:
                 path="server.log",
             )
 
-    def shutdown_server(self):
-        self.exit_signal.set()
-
-        self.watching_thread.join()
-
-        if len(self.addresses) > 0:
-            for conn, addr in self.addresses.items():
-                console_log(LogType.INFO, f"Ensure closing connection from {addr}!")
-                self.send_status_signal(conn, "terminate")
-                conn.close()
-
-            self.server.shutdown(SHUT_RDWR)
-
-        self.server.close()
-        console_log(LogType.INFO, "Server stopped!")
-
-    def pipe_res_watching_thread(self):
-        if self.watching_thread:
-            return
-
-        self.watching_thread = Thread(
-            target=start_watching,
-            args=(self.resources_path, self.exit_signal),
-            daemon=False,
-        )
-        self.watching_thread.start()
-
     def run(self):
         try:
             self.pipe_res_watching_thread()
 
             Thread(target=self.start_server, daemon=True).start()
 
-            while not self.exit_signal.is_set():
-                pass
+            while not self.exit_signal.is_set() and not self.is_shutdown:
+                sleep(1)
         except KeyboardInterrupt:
             console_log(LogType.INFO, "Server is shutting down...")
         except Exception as e:
@@ -231,6 +255,12 @@ class GUIServer(Server):
         self.root.columnconfigure(1, weight=1)
         self.root.columnconfigure(2, weight=0)
 
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        self.shutdown_server()
+        self.root.quit()
+
     def create_threads(self):
         self.threads["render-resource-list"] = Thread(
             target=self.render_resource_list, daemon=True
@@ -263,15 +293,15 @@ class GUIServer(Server):
         panel = SidePanel(self.root, col_idx=0)
         panel.set_label("Resource List")
 
-        self.component["resource-list"] = panel.text_box
         self.component["lt-sidebar"] = panel
+        self.component["resource-list"] = panel.text_box
 
     def render_rt_sidebar(self):
         panel = SidePanel(self.root, col_idx=2, side=True)
         panel.set_label("Client List")
 
-        self.component["client-list"] = panel.text_box
         self.component["rt-sidebar"] = panel
+        self.component["client-list"] = panel.text_box
 
     def render_main_frame(self):
         main_frame = create_frame(self.root)
@@ -281,6 +311,13 @@ class GUIServer(Server):
         main_frame.columnconfigure(0, weight=1)
 
         self.component["main"] = main_frame
+
+        self.component["process"] = Section(main_frame, row_idx=0)
+        self.component["process"].add_label("Download process")
+
+        self.component["download-process"] = {}
+
+        self.render_log_box()
 
     def render_resource_list(self):
         if not "lt-sidebar" in self.component:
@@ -305,10 +342,7 @@ class GUIServer(Server):
         self.component["resource-list"].configure(state="disabled")
 
         self.logging(
-            raw_log(
-                LogType.INFO,
-                f"{datetime.now()}\n\tResource list updated!",
-            )
+            raw_log(LogType.INFO, f"{get_timestamp()}\n\tResource list updated!")
         )
         self.root.after(2000, self.render_resource_list)
 
@@ -328,32 +362,56 @@ class GUIServer(Server):
 
         self.component["client-list"].configure(state="disabled")
 
-        self.logging(raw_log(LogType.INFO, f"{datetime.now()}\n\tClient list updated!"))
+        self.logging(
+            raw_log(LogType.INFO, f"{get_timestamp()}\n\tClient list updated!")
+        )
 
         self.root.after(2000, self.render_client_list)
 
     def render_download_process(self):
-        if not "main" in self.component:
+        if not "process" in self.component:
             return
 
         if self.exit_signal.is_set():
             return
 
-        self.component["process"] = Section(self.component["main"], row_idx=0)
-        self.component["process"].add_label("Download process")
+        copy_manager = self.download_manager.copy()
+        to_remove = []
 
-        for conn, manager in self.download_manager.items():
+        for conn, filename in self.component["download-process"]:
+            if not filename in [f.queue for f in copy_manager.values()]:
+                self.component["download-process"][(conn, filename)][0].destroy()
+                to_remove.append((conn, filename))
+
+        for item in to_remove:
+            del self.component["download-process"][item]
+
+        for conn, manager in copy_manager.items():
             for item in manager.queue:
-                cur, tot, percent = manager.queue[item].raw_progress()
+                file = manager.queue[item]
 
-                if percent >= 100:
-                    # destroy the progress bar
-                    pass
+                cur, tot, percent = file.raw_progress()
+                filename = file.filename
 
-        # for i in range(1, 10):
-        #     self.component["process"].add_progress_bar(row=i, col=0)
-        
-        self.root.after(2000, self.render_download_process)
+                if not (conn, filename) in self.component["download-process"]:
+                    self.component["process"].add_progress_bar_frame(
+                        label=f"{self.addresses[conn][1]} | {filename}",
+                        row=len(self.component["download-process"]) + 1,
+                        col=0,
+                    )
+
+                    self.component["download-process"][(conn, filename)] = (
+                        self.component["process"]
+                    ).progress_bars[-1]
+
+                self.component["download-process"][(conn, filename)][1].set(percent)
+
+                if file.is_done():
+                    self.component["download-process"][(conn, filename)][0].destroy()
+                    del self.component["download-process"][(conn, filename)]
+                    continue
+
+        self.root.after(150, self.render_download_process)
 
     def render_log_box(self):
         if not "main" in self.component:
@@ -366,59 +424,59 @@ class GUIServer(Server):
         self.component["log"] = frame.text_box
         self.component["log-box"] = frame
 
-    def render_start_btn(self):
+    def render_stop_btn(self):
         if not "lt-sidebar" in self.component:
             return
 
-        def start_action():
-            self.threads["run"].start()
-
-            self.component["start-btn"].configure(state="disabled")
-
-        btn = create_btn(self.component["lt-sidebar"], "Start Server", start_action)
+        btn = create_btn(
+            self.component["lt-sidebar"],
+            "Stop Server",
+            self.on_closing,
+            fg_color="#ef4444",
+            hover_color="#991b1b",
+            text_color="white",
+        )
         btn.grid(row=2, column=0, padx=10, pady=10, sticky="sew")
 
-        self.component["start-btn"] = btn
+        self.component["stop-btn"] = btn
 
     def render(self):
         try:
             self.render_lt_sidebar()
             self.render_rt_sidebar()
-
             self.render_main_frame()
-            self.render_download_process()
-            self.render_log_box()
 
             self.pipe_res_watching_thread()
+            for thread in [
+                "render-download-process",
+                "render-resource-list",
+                "render-client-list",
+                "run",
+            ]:
+                self.threads[thread].start()
 
-            self.threads["render-resource-list"].start()
-            self.threads["render-client-list"].start()
+            self.render_stop_btn()
 
-            self.render_start_btn()
             self.root.mainloop()
-
         except KeyboardInterrupt:
-            console_log(LogType.INFO, "Server is shutting down...")
+            console_log(LogType.INFO, "GUIServer is shutting down...")
         except Exception as e:
-            console_log(LogType.ERR, f"An error occurs when running server: {e}")
+            console_log(LogType.ERR, f"An error occurs when running gui server: {e}")
         finally:
-            self.shutdown_server()
-
+            self.on_closing()
             self.threads["run"].join() if self.threads["run"].is_alive() else None
 
 
 if __name__ == "__main__":
-    parser = ArgumentParser(
+    args = parse_args(
         prog="Socket Server",
-        description="A simple socket server for file downloading",
+        desc="A simple socket server for downloading files",
+        wrappers=[with_gui_arg, with_part1_arg],
     )
-    with_gui_arg(parser)
-    args = parser.parse_args()
 
-    use_gui = args.gui
-    if use_gui:
+    if args.gui:
         print("--gui detected, using GUI version\n")
         GUIServer().render()
     else:
-        print("--gui not detected, using console version\n")
+        print("--gui 'not' detected, using console version\n")
         Server().run()
