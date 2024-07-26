@@ -156,27 +156,6 @@ class BaseServer:
                 LogType.ERR, addr, f"An error occurs when closing connection::{e}"
             )
 
-    def start_server(self):
-        try:
-            self.server.listen(BACKLOG)
-            console_log(LogType.INFO, f"Server has started at {ADDR}")
-            console_log(LogType.INFO, f"Alternative: {gethostbyname(gethostname())}\n")
-
-            while not self.exit_signal.is_set():
-                if not self.server:
-                    continue
-
-                conn, addr = self.server.accept()
-                self.addresses[conn] = addr
-
-                Thread(target=self.handle_client, args=(conn, addr)).start()
-        except Exception as e:
-            local_log(
-                LogType.ERR,
-                message=f"[start_server] - An error occurs when handling client: {e}",
-                path="server.log",
-            )
-
     def shutdown_server(self):
         self.exit_signal.set()
 
@@ -276,6 +255,12 @@ class GUIServer(Server):
         self.root.columnconfigure(1, weight=1)
         self.root.columnconfigure(2, weight=0)
 
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
+
+    def on_closing(self):
+        self.shutdown_server()
+        self.root.quit()
+
     def create_threads(self):
         self.threads["render-resource-list"] = Thread(
             target=self.render_resource_list, daemon=True
@@ -308,15 +293,15 @@ class GUIServer(Server):
         panel = SidePanel(self.root, col_idx=0)
         panel.set_label("Resource List")
 
-        self.component["resource-list"] = panel.text_box
         self.component["lt-sidebar"] = panel
+        self.component["resource-list"] = panel.text_box
 
     def render_rt_sidebar(self):
         panel = SidePanel(self.root, col_idx=2, side=True)
         panel.set_label("Client List")
 
-        self.component["client-list"] = panel.text_box
         self.component["rt-sidebar"] = panel
+        self.component["client-list"] = panel.text_box
 
     def render_main_frame(self):
         main_frame = create_frame(self.root)
@@ -326,6 +311,13 @@ class GUIServer(Server):
         main_frame.columnconfigure(0, weight=1)
 
         self.component["main"] = main_frame
+
+        self.component["process"] = Section(main_frame, row_idx=0)
+        self.component["process"].add_label("Download process")
+
+        self.component["download-process"] = {}
+
+        self.render_log_box()
 
     def render_resource_list(self):
         if not "lt-sidebar" in self.component:
@@ -350,10 +342,7 @@ class GUIServer(Server):
         self.component["resource-list"].configure(state="disabled")
 
         self.logging(
-            raw_log(
-                LogType.INFO,
-                f"{datetime.now()}\n\tResource list updated!",
-            )
+            raw_log(LogType.INFO, f"{get_timestamp()}\n\tResource list updated!")
         )
         self.root.after(2000, self.render_resource_list)
 
@@ -373,32 +362,56 @@ class GUIServer(Server):
 
         self.component["client-list"].configure(state="disabled")
 
-        self.logging(raw_log(LogType.INFO, f"{datetime.now()}\n\tClient list updated!"))
+        self.logging(
+            raw_log(LogType.INFO, f"{get_timestamp()}\n\tClient list updated!")
+        )
 
         self.root.after(2000, self.render_client_list)
 
     def render_download_process(self):
-        if not "main" in self.component:
+        if not "process" in self.component:
             return
 
         if self.exit_signal.is_set():
             return
 
-        self.component["process"] = Section(self.component["main"], row_idx=0)
-        self.component["process"].add_label("Download process")
+        copy_manager = self.download_manager.copy()
+        to_remove = []
 
-        for conn, manager in self.download_manager.items():
+        for conn, filename in self.component["download-process"]:
+            if not filename in [f.queue for f in copy_manager.values()]:
+                self.component["download-process"][(conn, filename)][0].destroy()
+                to_remove.append((conn, filename))
+
+        for item in to_remove:
+            del self.component["download-process"][item]
+
+        for conn, manager in copy_manager.items():
             for item in manager.queue:
-                cur, tot, percent = manager.queue[item].raw_progress()
+                file = manager.queue[item]
 
-                if percent >= 100:
-                    # destroy the progress bar
-                    pass
+                cur, tot, percent = file.raw_progress()
+                filename = file.filename
 
-        # for i in range(1, 10):
-        #     self.component["process"].add_progress_bar(row=i, col=0)
-        
-        self.root.after(2000, self.render_download_process)
+                if not (conn, filename) in self.component["download-process"]:
+                    self.component["process"].add_progress_bar_frame(
+                        label=f"{self.addresses[conn][1]} | {filename}",
+                        row=len(self.component["download-process"]) + 1,
+                        col=0,
+                    )
+
+                    self.component["download-process"][(conn, filename)] = (
+                        self.component["process"]
+                    ).progress_bars[-1]
+
+                self.component["download-process"][(conn, filename)][1].set(percent)
+
+                if file.is_done():
+                    self.component["download-process"][(conn, filename)][0].destroy()
+                    del self.component["download-process"][(conn, filename)]
+                    continue
+
+        self.root.after(150, self.render_download_process)
 
     def render_log_box(self):
         if not "main" in self.component:
@@ -411,44 +424,46 @@ class GUIServer(Server):
         self.component["log"] = frame.text_box
         self.component["log-box"] = frame
 
-    def render_start_btn(self):
+    def render_stop_btn(self):
         if not "lt-sidebar" in self.component:
             return
 
-        def start_action():
-            self.threads["run"].start()
-
-            self.component["start-btn"].configure(state="disabled")
-
-        btn = create_btn(self.component["lt-sidebar"], "Start Server", start_action)
+        btn = create_btn(
+            self.component["lt-sidebar"],
+            "Stop Server",
+            self.on_closing,
+            fg_color="#ef4444",
+            hover_color="#991b1b",
+            text_color="white",
+        )
         btn.grid(row=2, column=0, padx=10, pady=10, sticky="sew")
 
-        self.component["start-btn"] = btn
+        self.component["stop-btn"] = btn
 
     def render(self):
         try:
             self.render_lt_sidebar()
             self.render_rt_sidebar()
-
             self.render_main_frame()
-            self.render_download_process()
-            self.render_log_box()
 
             self.pipe_res_watching_thread()
+            for thread in [
+                "render-download-process",
+                "render-resource-list",
+                "render-client-list",
+                "run",
+            ]:
+                self.threads[thread].start()
 
-            self.threads["render-resource-list"].start()
-            self.threads["render-client-list"].start()
+            self.render_stop_btn()
 
-            self.render_start_btn()
             self.root.mainloop()
-
         except KeyboardInterrupt:
             console_log(LogType.INFO, "GUIServer is shutting down...")
         except Exception as e:
             console_log(LogType.ERR, f"An error occurs when running gui server: {e}")
         finally:
-            self.shutdown_server()
-
+            self.on_closing()
             self.threads["run"].join() if self.threads["run"].is_alive() else None
 
 

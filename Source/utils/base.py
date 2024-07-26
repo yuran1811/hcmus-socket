@@ -1,9 +1,14 @@
 from sys import stdout
+from datetime import datetime
 
 from shared.constants import PRIOR_MAPPING
 
 
-def print_divider():
+def get_timestamp() -> str:
+    return datetime.now().strftime("%H:%M:%S, %d.%m.%y")
+
+
+def print_divider() -> str:
     print("+" * 25)
 
 
