@@ -34,6 +34,7 @@ from utils.gui import *
 class BaseServer:
     def __init__(self):
         self.resources_path = SERVER_RESOURCES_PATH
+        self.is_shutdown = False
 
         self.download_manager: dict[socket, ServerDownloadManager] = {}
         self.addresses: dict[socket, str] = {}
@@ -41,7 +42,6 @@ class BaseServer:
 
         self.exit_signal = Event()
         self.watching_thread: Thread = None
-        self.is_shutdown = False
 
         self.server = socket(AF_INET, SOCK_STREAM)
         self.server.bind(ADDR)
@@ -66,41 +66,41 @@ class BaseServer:
 
         conn.sendall(available_files.encode(ENCODING_FORMAT))
 
-        self.send_status_signal(conn, "success")
-
     def send_files(self, conn: socket):
+        if self.exit_signal.is_set() or self.is_shutdown:
+            return
+
         self.send_status_signal(conn, "accept")
+        msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
 
-        while not self.exit_signal.is_set() and not self.is_shutdown:
-            msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
-            if not msg or msg in [
-                "quit",
-                STATUS_SIGNAL["success"],
-                STATUS_SIGNAL["terminate"],
-                STATUS_SIGNAL["interrupt"],
-            ]:
-                break
+        if not msg or msg in [
+            "quit",
+            STATUS_SIGNAL["terminate"],
+            STATUS_SIGNAL["interrupt"],
+        ]:
+            self.close_connection(conn, self.addresses[conn])
+            return
 
-            if len(msg_plit := msg.split(SEPARATOR)) < 3:
-                continue
+        if not msg.startswith(DAT_SIGNAL["data"]):
+            return
 
-            _, filename, prior = msg_plit[:3]
+        if len(msg_plit := msg.split(SEPARATOR)) < 3:
+            return
 
-            if filename not in self.download_manager[conn].queue:
-                self.download_manager[conn].add_download(
-                    filename=filename,
-                    chunk_sz=int(prior),
-                    tot=get_asset_size(filename),
-                )
+        _, filename, prior = msg_plit[:3]
 
-            try:
-                bytes_to_send = self.download_manager[conn].download(filename)
-                conn.sendall(bytes_to_send)
-            except StopIteration:
-                self.send_dat_signal(conn, "done")
-                break
+        if filename not in self.download_manager[conn].queue:
+            self.download_manager[conn].add_download(
+                filename=filename,
+                chunk_sz=int(prior),
+                tot=get_asset_size(filename),
+            )
 
-        self.send_status_signal(conn, "success")
+        try:
+            bytes_to_send = self.download_manager[conn].download(filename)
+            conn.sendall(bytes_to_send)
+        except StopIteration:
+            self.send_dat_signal(conn, "done")
 
     def handle_client(self, conn: socket, addr: str):
         try:
@@ -113,14 +113,20 @@ class BaseServer:
 
             while not self.exit_signal.is_set() and not self.is_shutdown:
                 msg = conn.recv(MAX_BUF_SIZE).decode(ENCODING_FORMAT)
-                cmd = get_command(msg)
+                cmd = get_command(msg[:4])
+
+                if not msg or msg in [
+                    STATUS_SIGNAL["terminate"],
+                    STATUS_SIGNAL["interrupt"],
+                ]:
+                    break
 
                 if cmd == "quit":
                     self.close_connection(conn, addr)
                     break
                 elif cmd == "list":
                     self.send_resource_list(conn)
-                elif cmd == "get":
+                elif cmd == "file":
                     self.send_files(conn)
                 else:
                     self.send_status_signal(conn, "invalid")
@@ -131,6 +137,7 @@ class BaseServer:
                 LogType.ERR, addr, f"An error occurs when handling request::{e}"
             )
         finally:
+            self.client_log(LogType.INFO, addr, "Connection closed!")
             try:
                 del self.addresses[conn]
                 del self.download_manager[conn]
@@ -147,19 +154,19 @@ class BaseServer:
             conn.close()
 
             del self.addresses[conn]
-
-            self.client_log(LogType.INFO, addr, "Connection closed!")
         except SocketError:
             self.client_log(LogType.ERR, addr, "Connection is lost!")
         except Exception as e:
             self.client_log(
                 LogType.ERR, addr, f"An error occurs when closing connection::{e}"
             )
+        finally:
+            self.client_log(LogType.INFO, addr, "Connection closed!")
 
     def shutdown_server(self):
         self.exit_signal.set()
 
-        self.watching_thread.join()
+        self.watching_thread.join() if self.watching_thread.is_alive() else None
 
         if len(self.addresses) > 0:
             for conn, addr in self.addresses.items():
@@ -218,7 +225,7 @@ class Server(BaseServer):
             Thread(target=self.start_server, daemon=True).start()
 
             while not self.exit_signal.is_set() and not self.is_shutdown:
-                sleep(1)
+                sleep(5)
         except KeyboardInterrupt:
             console_log(LogType.INFO, "Server is shutting down...")
         except Exception as e:
@@ -233,10 +240,10 @@ class GUIServer(Server):
 
         self.init_root()
 
-        self.component: dict[str, tk.CTk | dict[tuple[socket, str], tk.CTk]] = {}
-
         self.threads: dict[str, Thread] = {}
         self.create_threads()
+
+        self.component: dict[str, tk.CTk | dict[tuple[socket, str], tk.CTk]] = {}
 
     def init_root(self):
         tk.set_appearance_mode("System")
@@ -246,7 +253,7 @@ class GUIServer(Server):
         self.root = tk.CTk()
         self.root.title("Socket Server")
 
-        self.root.geometry("780x420+50+50")
+        self.root.geometry("780x420+30+30")
         self.root.minsize(780, 420)
         self.root.maxsize(1024, 540)
 
@@ -271,6 +278,7 @@ class GUIServer(Server):
         self.threads["render-download-process"] = Thread(
             target=self.render_download_process, daemon=True
         )
+
         self.threads["run"] = Thread(target=self.run, daemon=True)
 
     def logging(self, text: str):
@@ -278,12 +286,10 @@ class GUIServer(Server):
             return
 
         self.component["log"].configure(state="normal")
-
         self.component["log"].insert("1.0", f"{text}\n")
         self.component["log"].see("1.0")
 
         __now_size = self.component["log"].get("1.0", "end")
-
         if len(__now_size.split("\n")) > 20:
             self.component["log"].delete("end - 2 lines", "end")
 
@@ -329,7 +335,6 @@ class GUIServer(Server):
         self.resources = get_resource_list_data()
 
         self.component["resource-list"].configure(state="normal")
-
         self.component["resource-list"].delete("1.0", "end")
         content = "\n".join(
             [
@@ -338,13 +343,13 @@ class GUIServer(Server):
             ]
         )
         self.component["resource-list"].insert("1.0", content)
-
         self.component["resource-list"].configure(state="disabled")
 
         self.logging(
             raw_log(LogType.INFO, f"{get_timestamp()}\n\tResource list updated!")
         )
-        self.root.after(2000, self.render_resource_list)
+
+        self.root.after(2500, self.render_resource_list)
 
     def render_client_list(self):
         if not "rt-sidebar" in self.component:
@@ -354,7 +359,6 @@ class GUIServer(Server):
             return
 
         self.component["client-list"].configure(state="normal")
-
         self.component["client-list"].delete("1.0", "end")
 
         content = "\n".join([f"{addr}\n" for addr in self.addresses.values()])
@@ -366,7 +370,7 @@ class GUIServer(Server):
             raw_log(LogType.INFO, f"{get_timestamp()}\n\tClient list updated!")
         )
 
-        self.root.after(2000, self.render_client_list)
+        self.root.after(1500, self.render_client_list)
 
     def render_download_process(self):
         if not "process" in self.component:
@@ -387,8 +391,9 @@ class GUIServer(Server):
             del self.component["download-process"][item]
 
         for conn, manager in copy_manager.items():
-            for item in manager.queue:
-                file = manager.queue[item]
+            queue = manager.queue.copy()
+            for item in queue:
+                file = queue[item]
 
                 cur, tot, percent = file.raw_progress()
                 filename = file.filename
@@ -411,7 +416,7 @@ class GUIServer(Server):
                     del self.component["download-process"][(conn, filename)]
                     continue
 
-        self.root.after(150, self.render_download_process)
+        self.root.after(250, self.render_download_process)
 
     def render_log_box(self):
         if not "main" in self.component:
@@ -446,6 +451,8 @@ class GUIServer(Server):
             self.render_rt_sidebar()
             self.render_main_frame()
 
+            self.render_stop_btn()
+
             self.pipe_res_watching_thread()
             for thread in [
                 "render-download-process",
@@ -454,8 +461,6 @@ class GUIServer(Server):
                 "run",
             ]:
                 self.threads[thread].start()
-
-            self.render_stop_btn()
 
             self.root.mainloop()
         except KeyboardInterrupt:
