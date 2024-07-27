@@ -217,9 +217,10 @@ class ClientDownloadManager(DownloadManager[ClientFileDownloader]):
     def render_download_status(self):
         if len(self.queue):
             stdout.write(
-                "All files has been downloaded!\n"
+                # "All files has been downloaded!\n"
+                f"Waiting for new files{" " * 25}\n"
                 if self.is_all_done()
-                else "Downloading files...\n"
+                else f"Downloading files...{" " * 25}\n"
             )
             for file_downloader in self.queue.values():
                 file_downloader.render_progress_bar()

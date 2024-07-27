@@ -13,8 +13,8 @@ COMMANDS = {
         "alias": ["list", "l"],
         "desc": "Get list of available files from server",
     },
-    "get": {
-        "alias": ["get", "g"],
+    "file": {
+        "alias": ["file", "f"],
         "desc": "Download files from server",
     },
 }
