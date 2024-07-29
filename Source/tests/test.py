@@ -89,8 +89,8 @@ class SharedTest(TestCase):
         self.assertEqual(get_command("l"), "list")
         self.assertEqual(get_command("ls"), None)
 
-        self.assertEqual(get_command("get"), "get")
-        self.assertEqual(get_command("g"), "get")
+        self.assertEqual(get_command("file"), "file")
+        self.assertEqual(get_command("f"), "file")
         self.assertEqual(get_command("dl"), None)
 
         self.assertEqual(get_command("unknown"), None)
