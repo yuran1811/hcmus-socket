@@ -1,8 +1,19 @@
 from socket import socket, AF_INET, SOCK_STREAM, error as SocketError
 from threading import Event, Thread
-from time import sleep
+from socket import (
+    socket,
+    AF_INET,
+    SOCK_STREAM,
+    error as SocketError,
+    gethostname,
+    gethostbyname,
+)
 
-from classes import ClientDownloadManager
+from rich.layout import Layout
+from rich.console import Console
+from rich.live import Live
+
+from classes import ClientDownloadManager, RichTable, RichProgress
 from shared.envs import (
     ADDR,
     MAX_BUF_SIZE,
@@ -17,6 +28,50 @@ from utils.logger import LogType, console_log
 from utils.files import render_file_list, extract_download_input, convert_file_size
 from utils.args import *
 from utils.gui import *
+
+
+class RichClient:
+    def __init__(self, *, files: list[tuple[str, int]] = []):
+        self.layout = Layout()
+        self.console = Console(width=160)
+        self.live = Live(self.layout, refresh_per_second=10, console=self.console)
+
+        self.layout.split_row(
+            Layout(name="download-process", ratio=1), Layout(name="resources", ratio=1)
+        )
+
+        self.rich_progress = RichProgress(
+            {},
+            layout=self.layout["download-process"],
+            console=self.console,
+            live=self.live,
+        )
+
+        self.rich_table = RichTable(
+            columns={
+                "No.": {
+                    "justify": "center",
+                    "style": "cyan",
+                    "no_wrap": True,
+                },
+                "Filename": {"justify": "left", "style": "magenta"},
+                "Size": {"justify": "right", "style": "green"},
+            },
+            rows=[],
+            layout=self.layout["resources"],
+            console=self.console,
+            live=self.live,
+        )
+
+        self.live.start(refresh=self.live._renderable is not None)
+
+        self.render_file_list(files)
+
+    def render_file_list(self, files: list[tuple[str, int]]):
+        __files = [list(file) for file in files]
+        print(__files)
+        self.rich_table.overwrite_rows(__files)
+        self.rich_table.layout_render()
 
 
 class BaseClient:
@@ -564,12 +619,20 @@ if __name__ == "__main__":
     args = parse_args(
         prog="Socket Client",
         desc="A simple socket client for downloading files",
-        wrappers=[with_gui_arg, with_part1_arg],
+        wrappers=[with_rich_arg, with_gui_arg, with_part1_arg],
     )
 
-    if args.gui:
-        print("--gui detected, using GUI version")
-        GUIClient().render()
+    use_part1 = args.part1
+    use_rich = args.rich
+    use_gui = args.gui
+
+    print("--part1 detected, using part1 version") if use_part1 else None
+    print("--gui detected, using GUI version") if use_gui else None
+
+    if use_gui:
+        print()
+        GUIClient(use_part1=use_part1).render()
     else:
-        print("--gui 'not' detected, using console version")
-        Client().run()
+        print("--rich detected, using rich version") if use_rich else None
+        print()
+        Client(use_rich=use_rich, use_part1=use_part1).run()

@@ -19,6 +19,7 @@
 
 - `customtkinter` - making gui
 - `python-dotenv` - load configs from .env file
+- `rich` - rendering more beautiful console progress bar
 - `watchdog` - watching file changes
 
 ## Usage
@@ -37,11 +38,25 @@ py server.py
 python3 server.py
 ```
 
-- Run the server with gui
+- Run the server with `gui`
 
 ```bash
 py server.py --gui
 ```
+
+- Run the server with `part1`
+
+```bash
+py server.py --part1
+```
+
+- Run the server with `gui` and `part1`
+
+```bash
+py server.py --gui --part1
+```
+
+### Run the client
 
 - Run the client
 
@@ -51,10 +66,28 @@ py client.py
 python3 client.py
 ```
 
-- Run the client with gui
+- Run the client with `gui`
 
 ```bash
 py client.py --gui
+```
+
+- Run the client with rich progress bar
+
+```bash
+py client.py --rich
+```
+
+- Run the client with `part1`
+
+```bash
+py client.py --part1
+```
+
+- Run the client with `gui`, `part1` and `rich`
+
+```bash
+py client.py --gui --part1 --rich
 ```
 
 ## Contributors
