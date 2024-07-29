@@ -5,15 +5,18 @@
 ### Standard libs
 
 - `argparse` - parse command line arguments
+- `datetime` - parse datetime with custom format
 - `enum` - usage of enum type
 - `json` - data serialization
-- `os` - for file operations
+- `os` - file operations
+- `pathlib` - usage of filesystem path
 - `re` - usage of regex
-- `socket` - for creating a socket server
-- `sys` - rendering progress bar
-- `threading` - for handling multiple clients
+- `socket` - creating sockets
+- `sys` - rendering progress bar (pure progress bar)
+- `threading` - handling multiple clients
 - `time` - time operations
 - `typing` - usage of generic type
+- `unittest` - testing functions
 
 ### External libs
 
@@ -24,11 +27,13 @@
 
 ## Usage
 
-- Download necessary libs
+### Download necessary libs
 
 ```bash
 pip install -r requirements.txt
 ```
+
+### Run the server
 
 - Run the server
 
