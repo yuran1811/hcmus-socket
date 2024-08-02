@@ -102,6 +102,7 @@ py client.py --gui --part1 --rich
 
 ## Docs
 
+- [Features](./md/features.md)
 - [Refs](./md/refs.md)
 - [Todo](./md/todo.md)
 - [UML](../diagrams.mdj)

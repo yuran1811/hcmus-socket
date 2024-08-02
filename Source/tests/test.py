@@ -4,9 +4,8 @@ from unittest import TestCase, TestSuite, TestLoader, TextTestRunner
 sys.path.append("..")
 
 from shared.envs import MAX_BUF_SIZE
-from shared.constants import PRIOR_MAPPING
+from shared.constants import PRIOR_MAPPING, get_prior_weight, get_prior_color
 from shared.command import get_command
-from utils.base import get_prior_weight
 from utils.files import convert_file_size, extract_download_input
 
 
@@ -18,6 +17,20 @@ class UtilsTest(TestCase):
         self.assertEqual(get_prior_weight("NORM"), 1)
 
         self.assertEqual(get_prior_weight("UNKNOWN"), 1)
+
+    def test_get_prior_color(self):
+        self.assertEqual(get_prior_color("CRIT"), "red")
+        self.assertEqual(get_prior_color("HIGH"), "orange")
+        self.assertEqual(get_prior_color("MIDD"), "yellow")
+        self.assertEqual(get_prior_color("NORM"), "green")
+
+        self.assertEqual(get_prior_color(2**6), "red")
+        self.assertEqual(get_prior_color(2**4), "orange")
+        self.assertEqual(get_prior_color(2**2), "yellow")
+        self.assertEqual(get_prior_color(1), "green")
+
+        self.assertEqual(get_prior_color("UNKNOWN"), "green")
+        self.assertEqual(get_prior_color(12), "green")
 
     def test_convert_file_size(self):
         self.assertEqual(convert_file_size(-1811), "not valid size")

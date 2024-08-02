@@ -6,8 +6,10 @@ from shared.envs import (
     SERVER_RESOURCES_PATH,
     CLIENT_DIR_PATH,
     CLIENT_DOWNLOADS_PATH,
+    CLIENT_REQUEST_INPUT,
 )
-from .base import get_prior_weight, print_divider
+from shared.constants import get_prior_weight
+from .base import print_divider
 
 
 def render_file_list(files: list[tuple[str, int]]):
@@ -81,7 +83,7 @@ def extract_download_input(line: str):
 
 
 def get_to_download_list(res_list: dict[str, tuple[int, str]]):
-    with open(os.path.join(CLIENT_DIR_PATH, "input.txt"), "r") as f:
+    with open(CLIENT_REQUEST_INPUT, "r") as f:
         downloads: list[tuple[str, int, int]] = []
 
         for line in f:

@@ -1,4 +1,6 @@
-import os
+import sys, os
+
+sys.path.append("..")
 
 from utils.files import get_resource_path, convert_file_size
 from utils.gen import generate_binfile

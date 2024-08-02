@@ -102,7 +102,9 @@ class Section(tk.CTkScrollableFrame):
 
         return progress_bar
 
-    def add_progress_bar_frame(self, *, label: str, row: int, col: int, **kwargs):
+    def add_progress_bar_frame(
+        self, *, label: str, row: int, col: int, progress_color: str = "green", **kwargs
+    ):
         frame = create_frame(self)
         frame.grid(row=row, column=col, pady=5, sticky="nsew")
         frame.rowconfigure(0, weight=1)
@@ -113,7 +115,9 @@ class Section(tk.CTkScrollableFrame):
             row=0, column=0, padx=(10, 0), sticky="nse"
         )
 
-        bar = self.add_progress_bar(root=frame, row=0, col=1, **kwargs)
+        bar = self.add_progress_bar(
+            root=frame, row=0, col=1, progress_color=progress_color, **kwargs
+        )
         self.progress_bars.append((frame, bar))
 
     def add_text_box(self, **kwargs):

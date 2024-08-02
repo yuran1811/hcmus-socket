@@ -3,7 +3,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Server configurations
+# Socket config
 HOST = getenv("HOST") or "127.0.0.1"
 PORT = int(getenv("PORT")) or 1811
 ADDR = (HOST, PORT)
@@ -14,7 +14,7 @@ MAX_BUF_SIZE = int(getenv("MAX_BUF_SIZE")) or 1024
 SEPARATOR = getenv("SEPARATOR") or "<SEPARATOR>"
 ENCODING_FORMAT = "utf8"
 
-# Application configurations
+# Application config
 APP_ROOT_PATH = "app"
 
 SERVER_DIR_PATH = path.join(APP_ROOT_PATH, "server")

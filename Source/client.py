@@ -1,4 +1,4 @@
-from socket import socket, AF_INET, SOCK_STREAM, error as SocketError
+from time import sleep
 from threading import Event, Thread
 from socket import (
     socket,
@@ -21,7 +21,8 @@ from shared.envs import (
     SEPARATOR,
     CLIENT_REQUEST_INPUT,
 )
-from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
+from shared.fonts import APP_FONT
+from shared.constants import STATUS_SIGNAL, DAT_SIGNAL, get_prior_color
 from shared.command import show_help, get_command
 from utils.base import get_timestamp
 from utils.logger import LogType, console_log
@@ -75,12 +76,22 @@ class RichClient:
 
 
 class BaseClient:
-    def __init__(self):
+    def __init__(self, *, use_rich: bool = False, use_part1: bool = False):
+        self.use_rich = use_rich
+        self.use_part1 = use_part1
+
         self.is_shutdown = False
         self.interval = 2
         self.exception_catch = None
 
-        self.download_manager = ClientDownloadManager([])
+        self.rich_renderer = RichClient() if use_rich else None
+
+        self.download_manager = ClientDownloadManager(
+            files=[],
+            rich_progress=(
+                self.rich_renderer.rich_progress if self.rich_renderer else None
+            ),
+        )
 
         self.resources: dict[str, int] = {}
         self.status: dict[str, tuple[int, bool]] = {}
@@ -93,12 +104,13 @@ class BaseClient:
         self.download_thread = Thread(target=self.downloads, daemon=False)
 
         self.client = socket(AF_INET, SOCK_STREAM)
+        self.client_addr = [gethostbyname(gethostname()), ""]
 
     def send_status_signal(self, signal: str):
-        self.client.send(STATUS_SIGNAL[signal].encode(ENCODING_FORMAT))
+        return self.client.send(STATUS_SIGNAL[signal].encode(ENCODING_FORMAT))
 
     def send_dat_signal(self, signal: str):
-        self.client.send(DAT_SIGNAL[signal].encode(ENCODING_FORMAT))
+        return self.client.send(DAT_SIGNAL[signal].encode(ENCODING_FORMAT))
 
     def logging(self, content):
         with open("client.log", "a") as f:
@@ -113,6 +125,9 @@ class BaseClient:
     def add_to_download(self, file: tuple[str, int, int]):
         filename, chunk_sz, tot = file
         self.download_manager.add_download(filename, chunk_sz, tot)
+
+        if self.use_rich:
+            self.download_manager.rich_progress.add_task(filename, chunk_sz, tot)
 
     def update_status(self):
         if self.must_exit():
@@ -158,7 +173,10 @@ class BaseClient:
                         self.exception_catch = SocketError
                         console_log(LogType.ERR, "Connection is lost!")
                         self.close_connection(True)
-                        return
+                        exit()
+                    except Exception as e:
+                        self.exception_catch = e
+                        continue
 
                     if accept in [
                         STATUS_SIGNAL["terminate"],
@@ -242,7 +260,13 @@ class BaseClient:
 
     def handle_fetch(self):
         self.fetch_list()
-        render_file_list([item for item in self.resources.items()])
+
+        if self.use_rich:
+            self.rich_renderer.render_file_list(
+                [item for item in self.resources.items()]
+            )
+        else:
+            render_file_list([item for item in self.resources.items()])
 
     def close_connection(self, terminate: bool = False):
         self.exit_signal.set()
@@ -257,21 +281,22 @@ class BaseClient:
                     self.client.send("quit".encode(ENCODING_FORMAT))
 
                 self.client.close()
-        except Exception as e:
-            console_log(LogType.ERR, f"An error occurs when closing connection: {e}")
+        except Exception:
+            pass
         finally:
             self.is_shutdown = True
             console_log(LogType.INFO, f"Client stopped!")
 
 
 class Client(BaseClient):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def run(self):
         try:
             console_log(LogType.INFO, "Connecting to the server...")
             self.client.connect(ADDR)
+            self.client_addr[1] = self.client.getsockname()
             console_log(LogType.INFO, "Connected to the server!")
 
             self.handle_fetch()
@@ -316,6 +341,10 @@ class Client(BaseClient):
             self.exception_catch = e
             console_log(LogType.ERR, f"An error occurs when running: {e}")
         finally:
+            if self.use_rich and self.rich_renderer:
+                self.rich_renderer.rich_progress.stop()
+                self.rich_renderer.live.stop()
+
             self.close_connection(
                 isinstance(self.exception_catch, KeyboardInterrupt)
                 or (
@@ -326,8 +355,8 @@ class Client(BaseClient):
 
 
 class GUIClient(BaseClient):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
         self.init_root()
 
@@ -363,22 +392,28 @@ class GUIClient(BaseClient):
             in [type(ConnectionRefusedError), type(ConnectionAbortedError)]
         )
         self.root.quit()
+        exit()
 
     def create_threads(self):
         self.threads["watch-download"] = Thread(
-            target=self.watch_download_list, daemon=True
+            target=self.watch_download_list, daemon=False
         )
         self.threads["render-input-list"] = Thread(
-            target=self.render_input_list, daemon=True
+            target=self.render_input_list, daemon=False
         )
         self.threads["render-download-process"] = Thread(
-            target=self.render_download_process, daemon=True
+            target=self.render_download_process, daemon=False
         )
 
         self.threads["download-files"] = Thread(
-            target=self.downloads, args=(0.0025,), daemon=True
+            target=self.downloads, args=(0.0025,), daemon=False
         )
         self.threads["run"] = Thread(target=self.run, daemon=True)
+
+    def render_win_title(self):
+        self.root.title(
+            f"Socket Client - ({self.client_addr[1][0]} | {self.client_addr[0]})::{self.client_addr[1][1]}"
+        )
 
     def render_lt_sidebar(self):
         panel = SidePanel(self.root, col_idx=0)
@@ -392,7 +427,6 @@ class GUIClient(BaseClient):
         panel.set_label("Input List")
 
         panel.text_box.configure(state="normal", cursor="arrow")
-        panel.text_box.focus_set()
 
         self.component["rt-sidebar"] = panel
         self.component["input-list"] = panel.text_box
@@ -411,7 +445,7 @@ class GUIClient(BaseClient):
         self.component["download-process"] = {}
 
     def render_resource_list(self):
-        if not "lt-sidebar" in self.component:
+        if "lt-sidebar" not in self.component:
             return
 
         if self.exit_signal.is_set():
@@ -435,7 +469,7 @@ class GUIClient(BaseClient):
         self.component["resource-list"].configure(state="disabled")
 
     def render_download_process(self):
-        if not "process" in self.component:
+        if "process" not in self.component:
             return
 
         if self.exit_signal.is_set():
@@ -445,12 +479,14 @@ class GUIClient(BaseClient):
         to_remove = []
 
         for filename in self.component["download-process"]:
-            if not filename in [f[0] for f in copied_list.items()]:
+            if filename not in [f[0] for f in copied_list.items()]:
                 self.component["download-process"][filename][0].destroy()
                 to_remove.append(filename)
 
         for item in to_remove:
             del self.component["download-process"][item]
+
+        self.render_fetch_btn()
 
         for filename, download in copied_list.items():
             if filename not in self.component["download-process"]:
@@ -458,13 +494,14 @@ class GUIClient(BaseClient):
                     label=f"{filename}",
                     row=len(self.component["download-process"]) + 1,
                     col=0,
+                    progress_color=get_prior_color(download.chunk_sz),
                 )
 
                 self.component["download-process"][filename] = self.component[
                     "process"
                 ].progress_bars[-1]
 
-            cur, tot, percent = download.raw_progress()
+            *_, percent = download.raw_progress()
             self.component["download-process"][filename][1].set(percent)
 
             if download.is_done():
@@ -474,7 +511,7 @@ class GUIClient(BaseClient):
         self.root.after(250, self.render_download_process)
 
     def render_input_list(self):
-        if not "rt-sidebar" in self.component:
+        if "rt-sidebar" not in self.component:
             return
 
         def get_content(_):
@@ -488,18 +525,24 @@ class GUIClient(BaseClient):
             with open(CLIENT_REQUEST_INPUT, "w") as f:
                 f.write(self.component["input-list"].get("1.0", "end"))
 
+        get_content(None)
         self.component["input-list"].bind("<FocusIn>", get_content)
-        self.component["input-list"].bind("<FocusOut>", update_content)
+        self.component["input-list"].bind("<Leave>", update_content)
 
     def render_fetch_btn(self):
-        if not "lt-sidebar" in self.component:
+        if "lt-sidebar" not in self.component:
             return
 
-        if not "fetch-btn" in self.component:
+        if "fetch-btn" not in self.component:
 
             def action():
+                if len(self.queue):
+                    return
+
+                self.component["fetch-btn"].configure(state="disabled")
                 self.handle_fetch()
                 self.render_resource_list()
+                self.component["fetch-btn"].configure(state="normal")
 
             btn = create_btn(
                 self.component["lt-sidebar"],
@@ -516,21 +559,19 @@ class GUIClient(BaseClient):
             self.component["fetch-btn"] = btn
 
         if not self.is_ready:
-            self.root.after(1000, self.render_fetch_btn)
+            self.root.after(750, self.render_fetch_btn)
             return
 
-        self.component["fetch-btn"].configure(state="normal", text="Fetch List")
-
-        if not all([file for file in self.status.values() if file[1]]):
-            self.component["fetch-btn"].configure(state="disabled")
-        else:
-            self.component["fetch-btn"].configure(state="normal")
+        self.component["fetch-btn"].configure(
+            state="disabled" if len(self.queue) else "normal",
+            text="Waiting for downloading..." if len(self.queue) else "Fetch List",
+        )
 
     def render_stop_btn(self):
-        if not "rt-sidebar" in self.component:
+        if "rt-sidebar" not in self.component:
             return
 
-        if not "stop-btn" in self.component:
+        if "stop-btn" not in self.component:
             btn = create_btn(
                 self.component["rt-sidebar"],
                 "Waiting for connection...",
@@ -580,6 +621,8 @@ class GUIClient(BaseClient):
     def run(self):
         try:
             self.client.connect(ADDR)
+            self.client_addr[1] = self.client.getsockname()
+            self.render_win_title()
             console_log(LogType.INFO, "Connected to the server!")
 
             self.is_ready = True
@@ -619,7 +662,7 @@ if __name__ == "__main__":
     args = parse_args(
         prog="Socket Client",
         desc="A simple socket client for downloading files",
-        wrappers=[with_rich_arg, with_gui_arg, with_part1_arg],
+        wrappers=[with_part1_arg, with_gui_arg, with_rich_arg],
     )
 
     use_part1 = args.part1

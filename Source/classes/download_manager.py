@@ -54,7 +54,7 @@ class ClientFileDownloader(FileDownloader):
             pass
 
     def download(self, chunk_data: bytes):
-        if self.is_done() or not chunk_data:
+        if self.is_done() or not chunk_data or chunk_data == b"eof":
             return
 
         with open(self.path, "ab") as f:
@@ -83,6 +83,8 @@ class ServerFileDownloader(FileDownloader):
                 if not data:
                     break
                 yield data
+
+            yield b"eof"
 
 
 T = TypeVar("T", ClientFileDownloader, ServerFileDownloader)

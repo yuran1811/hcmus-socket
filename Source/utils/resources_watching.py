@@ -14,7 +14,11 @@ def update_resource_list(path: str, event_type: str):
     console_log(LogType.OK, "Resources data updated successfully!")
 
 
-def start_watching(path=SERVER_RESOURCES_PATH, exit_signal: threading.Event = None):
+def start_watching(
+    path=SERVER_RESOURCES_PATH,
+    exit_signal: threading.Event = None,
+    updater=update_resource_list,
+):
     if not os.path.exists(path):
         os.makedirs(path, exist_ok=True)
 
@@ -24,7 +28,7 @@ def start_watching(path=SERVER_RESOURCES_PATH, exit_signal: threading.Event = No
     update_resources_data()
     console_log(LogType.INFO, f'Watching changes from "{path}"\n')
 
-    event_handler = MonitorFileSystemHandler(updater=update_resource_list)
+    event_handler = MonitorFileSystemHandler(updater=updater)
 
     observer = Observer()
     observer.schedule(event_handler, path, recursive=True)
