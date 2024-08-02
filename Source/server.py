@@ -33,7 +33,7 @@ from utils.gui import *
 
 
 class BaseServer:
-    def __init__(self, *, watching_updater=update_resource_list, client_updater: None):
+    def __init__(self, *, watching_updater=update_resource_list, client_updater=None):
         self.server_addr = [gethostbyname(gethostname()), ADDR]
         self.resources_path = SERVER_RESOURCES_PATH
         self.is_shutdown = False
