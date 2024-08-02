@@ -60,7 +60,9 @@
             2            & Hình Diễm Xuân      & 23127524      & \href{mailto:hdxuan23@clc.fitus.edu.vn}{hdxuan23@clc.fitus.edu.vn}   & Thành viên       \\\hline
           \end{tabular}
         \end{center}
-\end{itemize}
+    \item \textbf{Phương thức làm việc:} 
+    
+    \end{itemize}
 
 \pagebreak
 \section{Bảng đánh giá mức độ hoàn thành}
@@ -170,10 +172,28 @@
   \item \textbf{Sơ đồ minh họa một phần quá trình giao tiếp giữa Client và Server sử dụng giao thức TCP:}
         \begin{figure}[ht]
           \centering
-          \includegraphics[width=0.8\textwidth]{Screenshots/server-gui.png}
+          \includegraphics[width=0.8\textwidth]{Screenshorts/diagram.png}
           \caption{Sơ đồ minh họa kịch bản giao tiếp}\label{fig:diagram}
         \end{figure}
 \end{itemize}
+
+\pagebreak
+\section{Các tính năng chương trình}
+    \subsection{Các tính năng cơ bản}
+      \begin{enumerate}
+        \item Server phục vụ đồng thời nhiều Client cùng lúc.
+        \item Client nhận được danh sách tài nguyên từ Server. 
+        \item Thêm file mới vào danh sách  tải và thêm vào độ ưu tiên tải nếu muốn (Phần 2).
+        \item Duyệt file mỗi khi tải xong từng file (Phần 1) và duyệt file mỗi 2 giây (Phần 2).
+        \item Mỗi Client chỉ dùng duy nhất một kết nối để download tuần tự các phần nhỏ xen kẽ của từng file từ server (Phần 2).
+        \item Hiển thị thanh tiến độ tải.
+        \item Khi Client bấm "Ctrl + C" thì chương trình client đóng kết nối đến Server và kết thúc chương trình.
+    \end{enumerate}
+    \subsection{Các tính năng bổ sung}
+    \begin{enumerate}
+        \item Giao diện
+        \item 
+    \end{enumerate}
 
 \pagebreak
 \section{Hướng dẫn sử dụng tính năng chương trình}
@@ -232,7 +252,7 @@
 \section{Ảnh chụp màn hình}
 \begin{figure}[ht]
   \centering
-  \includegraphics[width=0.8\textwidth]{Screenshots/server-gui.png}
+  \includegraphics[width=0.8\textwidth]{Screenshorts/server-gui.png}
   \caption{Giao diện Server}\label{fig:server-gui}
 \end{figure}
 
@@ -240,6 +260,11 @@
 \pagebreak
 \section{Nguồn tham khảo}
 \begin{enumerate}
+    \item Mai Văn Cường - Trần Trung Dũng - Trần Hồng Ngọc - Lê Ngọc Sơn - Lê Giang 
+Thanh - Trương Thị Mỹ Trang - Đào Anh Tuấn, Giáo trình Mạng máy tính, NXB 
+Khoa học và Kỹ thuật, Xuất bản năm 2020
+    \item Khoa Công nghệ thông tin – Trường ĐH Khoa học Tự nhiên, Slide Bài giảng môn 
+Mạng máy tính, Tài liệu trực tuyến.
   \item \href{https://www.geeksforgeeks.org/}{geeksforgeeks}
   \item \href{https://stackoverflow.com/questions/47847392/keyboard-interrupt-sockets-and-threads}{Keyboard interrupt sockets and threads}
 \end{enumerate}
