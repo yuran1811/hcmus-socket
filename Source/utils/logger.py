@@ -1,5 +1,6 @@
 from enum import Enum
 
+from .base import get_timestamp
 
 class LogType(Enum):
     INFO = 0
@@ -18,6 +19,6 @@ def console_log(log_type: LogType, message: str):
 def local_log(log_type: LogType, *, message: str, path: str):
     with open(path, "a") as f:
         if log_type in LogType:
-            f.write(f"[{log_type.name}] - {message}\n")
+            f.write(f"{get_timestamp()}: [{log_type.name}] - {message}\n")
         else:
-            f.write(f"[i] - {message}\n")
+            f.write(f"{get_timestamp()}: [i] - {message}\n")

@@ -5,29 +5,35 @@
 ### Standard libs
 
 - `argparse` - parse command line arguments
+- `datetime` - parse datetime with custom format
 - `enum` - usage of enum type
 - `json` - data serialization
-- `os` - for file operations
+- `os` - file operations
+- `pathlib` - usage of filesystem path
 - `re` - usage of regex
-- `socket` - for creating a socket server
-- `sys` - rendering progress bar
-- `threading` - for handling multiple clients
+- `socket` - creating sockets
+- `sys` - rendering progress bar (pure progress bar)
+- `threading` - handling multiple clients
 - `time` - time operations
 - `typing` - usage of generic type
+- `unittest` - testing functions
 
 ### External libs
 
 - `customtkinter` - making gui
 - `python-dotenv` - load configs from .env file
+- `rich` - rendering more beautiful console progress bar
 - `watchdog` - watching file changes
 
 ## Usage
 
-- Download necessary libs
+### Download necessary libs
 
 ```bash
 pip install -r requirements.txt
 ```
+
+### Run the server
 
 - Run the server
 
@@ -37,11 +43,25 @@ py server.py
 python3 server.py
 ```
 
-- Run the server with gui
+- Run the server with `gui`
 
 ```bash
 py server.py --gui
 ```
+
+- Run the server with `part1`
+
+```bash
+py server.py --part1
+```
+
+- Run the server with `gui` and `part1`
+
+```bash
+py server.py --gui --part1
+```
+
+### Run the client
 
 - Run the client
 
@@ -51,10 +71,28 @@ py client.py
 python3 client.py
 ```
 
-- Run the client with gui
+- Run the client with `gui`
 
 ```bash
 py client.py --gui
+```
+
+- Run the client with rich progress bar
+
+```bash
+py client.py --rich
+```
+
+- Run the client with `part1`
+
+```bash
+py client.py --part1
+```
+
+- Run the client with `gui`, `part1` and `rich`
+
+```bash
+py client.py --gui --part1 --rich
 ```
 
 ## Contributors
@@ -64,6 +102,7 @@ py client.py --gui
 
 ## Docs
 
+- [Features](./md/features.md)
 - [Refs](./md/refs.md)
 - [Todo](./md/todo.md)
 - [UML](../diagrams.mdj)

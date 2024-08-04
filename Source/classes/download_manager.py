@@ -1,12 +1,9 @@
 from sys import stdout
 from typing import TypeVar, Generic
 
+from .rich_client import RichClient, RichProgress
 from utils.logger import LogType, console_log
-from utils.files import (
-    get_resource_path,
-    get_download_path,
-    get_downloaded_list,
-)
+from utils.files import get_resource_path, get_download_path, get_downloaded_list
 
 
 class FileDownloader:
@@ -47,29 +44,17 @@ class FileDownloader:
 
 
 class ClientFileDownloader(FileDownloader):
-    def __init__(
-        self,
-        *,
-        filename: str,
-        chunk_sz: int,
-        tot: int,
-        render_content: str = "",
-    ):
-        super().__init__(
-            filename=filename,
-            chunk_sz=chunk_sz,
-            tot=tot,
-            render_content=render_content,
-        )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        self.path = get_download_path(filename)
+        self.path = get_download_path(kwargs["filename"])
 
         # Create an empty file or overwrite the existing one
         with open(self.path, "wb"):
             pass
 
     def download(self, chunk_data: bytes):
-        if self.is_done() or not chunk_data:
+        if self.is_done() or not chunk_data or chunk_data == b"eof":
             return
 
         with open(self.path, "ab") as f:
@@ -81,22 +66,10 @@ class ClientFileDownloader(FileDownloader):
 
 
 class ServerFileDownloader(FileDownloader):
-    def __init__(
-        self,
-        *,
-        filename: str,
-        chunk_sz: int,
-        tot: int,
-        render_content: str = "",
-    ):
-        super().__init__(
-            filename=filename,
-            chunk_sz=chunk_sz,
-            tot=tot,
-            render_content=render_content,
-        )
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
-        self.path = get_resource_path(filename)
+        self.path = get_resource_path(kwargs["filename"])
 
         # Create a generator to read the file by chunks
         self.file_gen = self.read_by_chunks_generator()
@@ -111,12 +84,14 @@ class ServerFileDownloader(FileDownloader):
                     break
                 yield data
 
+            yield b"eof"
+
 
 T = TypeVar("T", ClientFileDownloader, ServerFileDownloader)
 
 
 class DownloadManager(Generic[T]):
-    def __init__(self, files: list[tuple[str, int, int]]):
+    def __init__(self, *, files: list[tuple[str, int, int]]):
         self.queue: dict[str, T] = {}
         self.download_list: dict[str, T] = {}
         self.resource_list: dict[str, tuple[int, int]] = {}
@@ -173,8 +148,18 @@ class DownloadManager(Generic[T]):
 
 
 class ClientDownloadManager(DownloadManager[ClientFileDownloader]):
-    def __init__(self, files: list[tuple[str, int, int]]):
-        super().__init__(files)
+    def __init__(self, *, rich_client: RichClient = None, **kwargs):
+        super().__init__(**kwargs)
+
+        self.rich_client: RichClient = rich_client
+        self.rich_progress: RichProgress = (
+            rich_client.rich_progress if rich_client else None
+        )
+        self.rich_progress_render = (
+            self.rich_progress.display_progress_with_title()
+            if self.rich_progress
+            else None
+        )
 
         self.exists.update(get_downloaded_list())
 
@@ -216,8 +201,14 @@ class ClientDownloadManager(DownloadManager[ClientFileDownloader]):
 
     def render_download_status(self):
         if len(self.queue):
+            if self.rich_progress_render:
+                try:
+                    next(self.rich_progress_render)
+                except StopIteration:
+                    pass
+                return
+
             stdout.write(
-                # "All files has been downloaded!\n"
                 f"Waiting for new files{" " * 25}\n"
                 if self.is_all_done()
                 else f"Downloading files...{" " * 25}\n"
@@ -242,8 +233,8 @@ class ClientDownloadManager(DownloadManager[ClientFileDownloader]):
 
 
 class ServerDownloadManager(DownloadManager[ServerFileDownloader]):
-    def __init__(self, files: list[tuple[str, int, int]]):
-        super().__init__(files)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
 
     def download(self, filename: str):
         data = None
