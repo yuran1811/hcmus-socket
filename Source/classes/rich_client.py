@@ -8,10 +8,12 @@ from utils.files import convert_file_size
 
 
 class RichClient:
-    def __init__(self, *, files: list[tuple[str, int]] = []):
+    def __init__(
+        self, *, files: list[tuple[str, int]] = [], table_title: str = "Rich Table"
+    ):
         self.layout = Layout()
         self.console = Console(width=160)
-        self.live = Live(self.layout, console=self.console, refresh_per_second=10)
+        self.live = Live(self.layout, console=self.console, refresh_per_second=6)
 
         self.layout.split_row(
             Layout(name="download-process", ratio=1), Layout(name="resources", ratio=1)
@@ -25,6 +27,7 @@ class RichClient:
         )
 
         self.rich_table = RichTable(
+            title=table_title,
             columns={
                 "Filename": {
                     "justify": "left",
@@ -41,7 +44,7 @@ class RichClient:
         )
 
         self.live.start(refresh=self.live._renderable is not None)
-        self.rich_table.layout_render()
+        self.rich_table.update_layout()
         self.rich_progress.update_layout()
 
         self.render_file_list(files)
@@ -52,4 +55,4 @@ class RichClient:
     def render_file_list(self, files: list[tuple[str, int]]):
         __files = self.convert_to_row(files)
         self.rich_table.overwrite_rows(__files)
-        self.rich_table.layout_render()
+        self.rich_table.update_layout()

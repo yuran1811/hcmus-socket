@@ -33,19 +33,17 @@ from utils.gui import *
 
 
 class BaseServer:
-
     def __init__(
         self,
         *,
         use_part1=False,
-        watching_updater=update_resource_list,
         client_updater=None,
+        watching_updater=update_resource_list,
     ):
         self.use_part1 = use_part1
 
-        self.server_addr = [gethostbyname(gethostname()), ADDR]
-        self.resources_path = SERVER_RESOURCES_PATH
         self.is_shutdown = False
+        self.resources_path = SERVER_RESOURCES_PATH
         self.updater = {"watching": watching_updater, "client": client_updater}
 
         self.download_manager: dict[socket, ServerDownloadManager] = {}
@@ -56,6 +54,7 @@ class BaseServer:
         self.watching_thread: Thread = None
 
         try:
+            self.server_addr = [gethostbyname(gethostname()), ADDR]
             self.server = socket(AF_INET, SOCK_STREAM)
             self.server.bind(ADDR)
         except SocketError:
@@ -262,7 +261,7 @@ class Server(BaseServer):
             Thread(target=self.start_server, daemon=True).start()
 
             while not self.exit_signal.is_set() and not self.is_shutdown:
-                sleep(5)
+                sleep(2)
         except KeyboardInterrupt:
             console_log(LogType.INFO, "Server is shutting down...")
         except Exception as e:
@@ -285,10 +284,10 @@ class GUIServer(Server):
             **kwargs, watching_updater=updater, client_updater=self.render_client_list
         )
 
-        self.init_root()
-
         self.threads: dict[str, Thread] = {}
         self.create_threads()
+
+        self.init_root()
 
         self.component: dict[str, tk.CTk | dict[tuple[socket, str], tk.CTk]] = {}
 

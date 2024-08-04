@@ -36,7 +36,7 @@ class RichProgress:
         self.layout = Layout() if not layout else layout
         self.console = Console(width=80) if not console else console
         self.live = (
-            Live(self.layout, refresh_per_second=10, console=self.console)
+            Live(self.layout, refresh_per_second=6, console=self.console)
             if not live
             else live
         )

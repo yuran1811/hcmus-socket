@@ -41,7 +41,7 @@ if __name__ == "__main__":
         live=live,
     )
     rich_table.overwrite_rows(rows)
-    rich_table.layout_render()
+    rich_table.update_layout()
 
     rich_progress = RichProgress(
         {"file1": (3, 65), "file2": (2, 41), "file3": (4, 100)},
@@ -81,7 +81,7 @@ if __name__ == "__main__":
                             ]
                         ]
                     )
-                rich_table.layout_render()
+                rich_table.update_layout()
                 sleep(0.1)
         except StopIteration:
             pass
