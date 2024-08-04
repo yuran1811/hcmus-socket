@@ -21,8 +21,7 @@ from shared.envs import (
     SEPARATOR,
     SERVER_RESOURCES_PATH,
 )
-from shared.fonts import APP_FONT
-from shared.constants import STATUS_SIGNAL, DAT_SIGNAL
+from shared.constants import STATUS_SIGNAL, DAT_SIGNAL, get_prior_color
 from shared.command import get_command
 from utils.base import get_timestamp
 from utils.logger import LogType, raw_log, local_log, console_log
@@ -40,7 +39,7 @@ class BaseServer:
         self.updater = {"watching": watching_updater, "client": client_updater}
 
         self.download_manager: dict[socket, ServerDownloadManager] = {}
-        self.addresses: dict[socket, str] = {}
+        self.addresses: dict[socket, tuple[str, int]] = {}
         self.resources: dict[str, tuple[int, str]] = {}
 
         self.exit_signal = Event()
@@ -159,6 +158,8 @@ class BaseServer:
         try:
             if not conn or not addr or conn not in self.addresses:
                 return
+
+            self.updater["client"]() if self.updater["client"] else None
 
             if self.send_status_signal(conn, "terminate"):
                 conn.shutdown(SHUT_RDWR)
@@ -411,7 +412,9 @@ class GUIServer(Server):
             for key in self.component["download-process"]:
                 addr, filename = key.split("|")
 
-                if addr == "null":
+                if addr == "null" or int(addr) not in [
+                    f[1] for f in self.addresses.values()
+                ]:
                     to_remove.append(key)
                     continue
 
@@ -465,6 +468,7 @@ class GUIServer(Server):
                         label=_label,
                         row=len(self.component["download-process"]) + 1,
                         col=0,
+                        progress_color=get_prior_color(file.chunk_sz // MAX_BUF_SIZE),
                     )
 
                     self.component["download-process"][_label] = (

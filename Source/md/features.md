@@ -9,4 +9,5 @@
 ## Additional Features
 
 - GUI for both server and client
-- Progress bar for downloading
+- Beautiful progress bar (custom color for each download priority)
+- Auto update resources list with changes (server side)

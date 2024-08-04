@@ -1,11 +1,10 @@
 import pathlib
 
-import customtkinter as ctk
+import customtkinter as tk
 
 
-fonts_path = pathlib.Path(__file__).parent
-ctk.FontManager.load_font(str(fonts_path.joinpath("JetBrainsMono[wght].ttf")))
-
+FONTS_PATH = pathlib.Path(__file__).parent
+FONT_SCALE = 0.75
 FONT_SIZE = {
     "xs": 12,
     "sm": 14,
@@ -19,24 +18,29 @@ FONT_SIZE = {
 
 
 class FontFace:
-    def __init__(
-        self,
-        family="JetBrans Mono",
-        size="base",
-        weight="normal",
-        slant="roman",
-        underline=False,
-    ):
-        self.family = family
-        self.size = size
-        self.weight = weight
-        self.slant = slant
-        self.underline = underline
+    def __init__(self, family="JetBrains Mono"):
+        self.families = [family]
 
-    def get_font(self, *, font_size: str, bold=False, italic=False, underline=False):
-        return ctk.CTkFont(
-            family=self.family,
-            size=FONT_SIZE.get(font_size, FONT_SIZE["base"]),
+    def load_fonts(
+        self,
+        fonts: list[tuple[str, str]] = [("JetBrains Mono", "JetBrainsMono[wght].ttf")],
+    ):
+        for family, path in fonts:
+            self.families.append(family)
+            tk.FontManager.load_font(str(FONTS_PATH.joinpath(path)))
+
+    def get_font(
+        self,
+        *,
+        family="JetBrains Mono",
+        font_size="",
+        bold=False,
+        italic=False,
+        underline=False
+    ):
+        return tk.CTkFont(
+            family=family,
+            size=int(FONT_SIZE.get(font_size, FONT_SIZE["base"]) * FONT_SCALE),
             weight="bold" if bold else "normal",
             slant="italic" if italic else "roman",
             underline=underline,

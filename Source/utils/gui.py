@@ -2,8 +2,7 @@ import customtkinter as tk
 import tkinter
 
 
-def create_label(root: tk.CTk, text: str = "label", **kwargs):
-    return tk.CTkLabel(root, text=text, **kwargs)
+from shared.fonts import APP_FONT
 
 
 def create_frame(root: tk.CTk, **kwargs):
@@ -14,24 +13,35 @@ def create_scrollable_frame(root: tk.CTk, **kwargs):
     return tk.CTkScrollableFrame(root, **kwargs)
 
 
-def create_text(root: tk.CTk, **kwargs):
-    return tkinter.Text(root, **kwargs)
-
-
-def create_text_box(root: tk.CTk, **kwargs):
-    return tk.CTkTextbox(root, **kwargs)
-
-
 def create_scrollbar(root: tk.CTk, command, **kwargs):
     return tk.CTkScrollbar(root, command=command, **kwargs)
 
 
+def create_label(root: tk.CTk, text: str = "label", **kwargs):
+    return tk.CTkLabel(root, font=APP_FONT.get_font(bold=True), text=text, **kwargs)
+
+
+def create_text(root: tk.CTk, **kwargs):
+    return tkinter.Text(root, font=APP_FONT.get_font(), **kwargs)
+
+
+def create_text_box(root: tk.CTk, **kwargs):
+    return tk.CTkTextbox(root, font=APP_FONT.get_font(), **kwargs)
+
+
 def create_btn(root: tk.CTk, text: str, command, **kwargs):
-    return tk.CTkButton(root, text=text, command=command, width=20, **kwargs)
+    return tk.CTkButton(
+        root,
+        font=APP_FONT.get_font(bold=True),
+        text=text,
+        command=command,
+        width=20,
+        **kwargs
+    )
 
 
 def create_checkbox(root: tk.CTk, text: str, **kwargs):
-    return tk.CTkCheckBox(root, text=text, **kwargs)
+    return tk.CTkCheckBox(root, font=APP_FONT.get_font(), text=text, **kwargs)
 
 
 def create_progress_bar(root: tk.CTk, **kwargs):

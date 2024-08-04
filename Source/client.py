@@ -106,6 +106,47 @@ class BaseClient:
         self.client = socket(AF_INET, SOCK_STREAM)
         self.client_addr = [gethostbyname(gethostname()), ""]
 
+    def exception_handler(
+        self, func, *, exception_msg="An error occurs", raise_outer=False
+    ):
+
+        def wrapper(*args, **kwargs):
+            try:
+                return func(*args, **kwargs)
+            except ConnectionAbortedError:
+                self.exception_catch = ConnectionAbortedError
+                console_log(LogType.ERR, "Connection is aborted!")
+            except ConnectionResetError:
+                self.exception_catch = ConnectionResetError
+                console_log(LogType.ERR, "Connection is reset!")
+            except ConnectionRefusedError:
+                self.exception_catch = ConnectionRefusedError
+                console_log(LogType.ERR, "Connection refused!")
+            except KeyboardInterrupt:
+                self.exception_catch = KeyboardInterrupt
+                console_log(LogType.INFO, "Client is shutting down...")
+            except SocketError:
+                self.exception_catch = SocketError
+                console_log(LogType.ERR, "Socket error!")
+            except Exception as e:
+                console_log(LogType.ERR, f"{exception_msg}: {e}")
+            finally:
+                if type(self.exception_catch) in [
+                    type(ConnectionRefusedError),
+                    type(ConnectionResetError),
+                ]:
+                    dialog = tk.CTkInputDialog(
+                        text="Server refused to connected, type any to quit",
+                        title="Quit",
+                    )
+                    dialog.get_input()
+
+                self.on_closing() if hasattr(self, "on_closing") else None
+
+                raise self.exception_catch if raise_outer else None
+
+        return wrapper
+
     def send_status_signal(self, signal: str):
         return self.client.send(STATUS_SIGNAL[signal].encode(ENCODING_FORMAT))
 
@@ -408,7 +449,10 @@ class GUIClient(BaseClient):
         self.threads["download-files"] = Thread(
             target=self.downloads, args=(0.0025,), daemon=False
         )
-        self.threads["run"] = Thread(target=self.run, daemon=True)
+        self.threads["run"] = Thread(
+            target=self.exception_handler(self.run, exception_msg="Error when running"),
+            daemon=True,
+        )
 
     def render_win_title(self):
         self.root.title(
@@ -494,7 +538,7 @@ class GUIClient(BaseClient):
                     label=f"{filename}",
                     row=len(self.component["download-process"]) + 1,
                     col=0,
-                    progress_color=get_prior_color(download.chunk_sz),
+                    progress_color=get_prior_color(download.chunk_sz // MAX_BUF_SIZE),
                 )
 
                 self.component["download-process"][filename] = self.component[
@@ -605,6 +649,15 @@ class GUIClient(BaseClient):
                 self.threads[thread].start()
 
             self.root.mainloop()
+        except ConnectionAbortedError:
+            self.exception_catch = ConnectionAbortedError
+            console_log(LogType.ERR, "Connection is aborted!")
+        except ConnectionResetError:
+            self.exception_catch = ConnectionResetError
+            console_log(LogType.ERR, "Connection is reset!")
+        except ConnectionRefusedError:
+            self.exception_catch = ConnectionRefusedError
+            console_log(LogType.ERR, "Connection refused!")
         except KeyboardInterrupt:
             self.exception_catch = KeyboardInterrupt
             console_log(LogType.INFO, "GUIServer is shutting down...")
@@ -619,43 +672,28 @@ class GUIClient(BaseClient):
             self.threads["run"].join() if self.threads["run"].is_alive() else None
 
     def run(self):
-        try:
-            self.client.connect(ADDR)
-            self.client_addr[1] = self.client.getsockname()
-            self.render_win_title()
-            console_log(LogType.INFO, "Connected to the server!")
+        self.client.connect(ADDR)
+        self.client_addr[1] = self.client.getsockname()
+        self.render_win_title()
+        console_log(LogType.INFO, "Connected to the server!")
 
-            self.is_ready = True
+        self.is_ready = True
 
-            self.handle_fetch()
-            self.update_status()
+        self.handle_fetch()
+        self.update_status()
 
-            self.render_resource_list()
+        self.render_resource_list()
 
-            for thread in [
-                "watch-download",
-                "download-files",
-                "render-input-list",
-                "render-download-process",
-            ]:
-                self.threads[thread].start()
+        for thread in [
+            "watch-download",
+            "download-files",
+            "render-input-list",
+            "render-download-process",
+        ]:
+            self.threads[thread].start()
 
-            while not self.exit_signal.is_set():
-                sleep(5)
-        except ConnectionAbortedError:
-            self.exception_catch = ConnectionAbortedError
-            console_log(LogType.ERR, "Connection is aborted!")
-        except ConnectionRefusedError:
-            self.exception_catch = ConnectionRefusedError
-            console_log(LogType.ERR, "Connection refused!")
-        finally:
-            if type(self.exception_catch) == type(ConnectionRefusedError):
-                dialog = tk.CTkInputDialog(
-                    text="Server refused to connected, type any to quit", title="Quit"
-                )
-                dialog.get_input()
-
-            self.on_closing()
+        while not self.exit_signal.is_set():
+            sleep(5)
 
 
 if __name__ == "__main__":
