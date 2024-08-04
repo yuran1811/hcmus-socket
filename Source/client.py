@@ -33,6 +33,7 @@ class BaseClient:
         self.use_part1 = use_part1
 
         self.is_shutdown = False
+        self.is_served = False
         self.interval = 2
         self.conn_timeout = 10
         self.exception_catch = None
@@ -113,6 +114,13 @@ class BaseClient:
     def must_exit(self):
         return self.must_stop() or self.watch_signal.is_set()
 
+    def count_down(self):
+        for _ in range(self.conn_timeout, 0, -1):
+            if self.is_served:
+                return
+            sleep(1)
+        print("Server is busy now, please wait...")
+
     def add_to_download(
         self,
         *,
@@ -147,6 +155,16 @@ class BaseClient:
                     del self.queue[filename]
 
     def watch_download_list(self):
+        if self.use_part1:
+            self.update_status()
+
+            if len(self.queue) == 0 or all(
+                [prior[1] for prior in self.status.values()]
+            ):
+                self.close_connection()
+
+            return
+
         while not self.must_exit():
             self.update_status()
             sleep(self.interval)
@@ -158,6 +176,11 @@ class BaseClient:
                     [prior[1] for prior in self.status.values()]
                 ):
                     self.queue.clear()
+
+                    if self.use_part1:
+                        self.watch_download_list()
+                        continue
+
                     sleep(sleep_time) if sleep_time > 0 else None
                     continue
 
@@ -223,6 +246,9 @@ class BaseClient:
                     if __is_done:
                         to_remove.append(filename)
 
+                    if self.use_part1:
+                        break
+
                 for filename in to_remove:
                     del self.queue[filename]
                 __queue.clear()
@@ -287,7 +313,12 @@ class BaseClient:
             pass
         finally:
             self.is_shutdown = True
-            console_log(LogType.INFO, f"Client stopped!")
+            console_log(
+                LogType.INFO,
+                f"Client stopped! - {get_timestamp()} (Press 'Enter' to exit)",
+            )
+
+        exit()
 
 
 class Client(BaseClient):
@@ -299,10 +330,16 @@ class Client(BaseClient):
             console_log(LogType.INFO, "Connecting to the server...")
             self.client.connect(ADDR)
             self.client_addr[1] = self.client.getsockname()
-            console_log(LogType.INFO, "Connected to the server!")
+            console_log(LogType.INFO, "Connected to the server!\n")
+            console_log(LogType.INFO, "Waiting for being served...")
+
+            if self.use_part1:
+                Thread(target=self.count_down, daemon=True).start()
 
             self.handle_fetch()
             self.update_status()
+
+            self.is_served = True
 
             self.watch_thread.start()
             self.download_thread.start()
