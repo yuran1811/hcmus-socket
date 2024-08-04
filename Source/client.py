@@ -20,7 +20,7 @@ from shared.envs import (
 )
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL, get_prior_color
 from shared.command import show_help, get_command
-from utils.base import get_timestamp
+from utils.base import get_timestamp, stable_render
 from utils.logger import LogType, console_log
 from utils.files import render_file_list, extract_download_input, convert_file_size
 from utils.args import *
@@ -118,8 +118,9 @@ class BaseClient:
         for _ in range(self.conn_timeout, 0, -1):
             if self.is_served:
                 return
+            stable_render(f"{_} seconds...\n", 2)
             sleep(1)
-        print("Server is busy now, please wait...")
+        stable_render("Server is busy now, please wait...\n\n", 3)
 
     def add_to_download(
         self,
@@ -333,8 +334,7 @@ class Client(BaseClient):
             console_log(LogType.INFO, "Connected to the server!\n")
             console_log(LogType.INFO, "Waiting for being served...")
 
-            if self.use_part1:
-                Thread(target=self.count_down, daemon=True).start()
+            Thread(target=self.count_down, daemon=True).start()
 
             self.handle_fetch()
             self.update_status()

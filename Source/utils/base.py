@@ -10,6 +10,8 @@ def print_divider() -> str:
     print("+" * 25)
 
 
-def stable_render(content: str):
+def stable_render(content: str, lines: int = 1):
     stdout.write(f"\r{content}")
     stdout.flush()
+
+    stdout.write("\033[F" * (lines - 1))
