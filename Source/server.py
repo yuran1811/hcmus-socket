@@ -14,6 +14,7 @@ import customtkinter as tk
 
 from classes import ServerDownloadManager
 from shared.envs import (
+    VERSION,
     ADDR,
     BACKLOG,
     MAX_BUF_SIZE,
@@ -32,7 +33,16 @@ from utils.gui import *
 
 
 class BaseServer:
-    def __init__(self, *, watching_updater=update_resource_list, client_updater=None):
+
+    def __init__(
+        self,
+        *,
+        use_part1=False,
+        watching_updater=update_resource_list,
+        client_updater=None,
+    ):
+        self.use_part1 = use_part1
+
         self.server_addr = [gethostbyname(gethostname()), ADDR]
         self.resources_path = SERVER_RESOURCES_PATH
         self.is_shutdown = False
@@ -232,7 +242,10 @@ class Server(BaseServer):
                 conn, addr = self.server.accept()
                 self.addresses[conn] = addr
 
-                Thread(target=self.handle_client, args=(conn, addr)).start()
+                if self.use_part1:
+                    self.handle_client(conn, addr)
+                else:
+                    Thread(target=self.handle_client, args=(conn, addr)).start()
         except SocketError:
             pass
         except Exception as e:
@@ -263,13 +276,13 @@ class Server(BaseServer):
 
 
 class GUIServer(Server):
-    def __init__(self):
+    def __init__(self, **kwargs):
         def updater(**kwargs):
             update_resource_list(**kwargs)
             self.render_resource_list()
 
         super().__init__(
-            watching_updater=updater, client_updater=self.render_client_list
+            **kwargs, watching_updater=updater, client_updater=self.render_client_list
         )
 
         self.init_root()
@@ -551,12 +564,22 @@ if __name__ == "__main__":
     args = parse_args(
         prog="Socket Server",
         desc="A simple socket server for downloading files",
-        wrappers=[with_gui_arg, with_part1_arg],
+        wrappers=[with_gui_arg, with_part1_arg, with_version_arg],
     )
 
-    if args.gui:
-        print("--gui detected, using GUI version\n")
-        GUIServer().render()
+    use_gui = args.gui
+    use_part1 = args.part1
+    use_version = args.version
+
+    if use_version:
+        print(f"Socket Server v{VERSION}")
+        exit()
+
+    print("--part1 detected, using part1 version") if use_part1 else None
+    print("--gui detected, using GUI version") if use_gui else None
+    print()
+
+    if use_gui:
+        GUIServer(use_part1=use_part1).render()
     else:
-        print("--gui 'not' detected, using console version\n")
-        Server().run()
+        Server(use_part1=use_part1).run()
