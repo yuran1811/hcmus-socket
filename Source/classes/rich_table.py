@@ -1,3 +1,5 @@
+from time import sleep
+
 from rich.table import Table
 from rich.layout import Layout
 from rich.console import Console
@@ -23,9 +25,15 @@ class RichTable:
             else live
         )
 
-        self.table = Table(title=title)
+        self.table_cols = columns
+        self.table_rows = rows
 
-        self.config_table(columns=columns, rows=rows)
+        self.table: Table = None
+        self.create_table()
+
+    def create_table(self, title: str = "Rich Table"):
+        self.table = Table(title=title)
+        self.config_table(columns=self.table_cols, rows=self.table_rows)
 
     def config_table(
         self, *, columns: dict[str, dict] = {}, rows: list[list[str]] = []
@@ -36,8 +44,8 @@ class RichTable:
             self.add_new_row(row)
 
     def overwrite_rows(self, rows: list[list[str]] = []):
-        self.table.rows.clear()
-        self.table.rows.extend(rows)
+        self.table_rows = rows
+        self.create_table()
 
     def add_new_row(self, row: list[str] = []):
         self.table.add_row(*row)

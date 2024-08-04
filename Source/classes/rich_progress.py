@@ -122,6 +122,11 @@ class RichProgress:
             )
         )
 
+    def update_layout(self):
+        self.update_header()
+        self.update_panel()
+        self.update_footer()
+
     def update_task_prog(self, task_id: TaskID):
         task: Task = self.progress.tasks[task_id]
         increment = self.task_map[task_id][1]
@@ -132,17 +137,13 @@ class RichProgress:
             self.progress.update(task_id, advance=increment)
 
     def display_progress_with_title(self):
-        self.update_header()
-        self.update_panel()
-        self.update_footer()
+        self.update_layout()
 
         while True:
+            self.update_layout()
+
             for task_id in self.tasks:
                 self.update_task_prog(task_id)
-
-            self.update_header()
-            self.update_panel()
-            self.update_footer()
 
             if self.is_stop:
                 break

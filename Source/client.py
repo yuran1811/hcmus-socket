@@ -9,11 +9,7 @@ from socket import (
     gethostbyname,
 )
 
-from rich.layout import Layout
-from rich.console import Console
-from rich.live import Live
-
-from classes import ClientDownloadManager, RichTable, RichProgress
+from classes import ClientDownloadManager, RichClient
 from shared.envs import (
     ADDR,
     MAX_BUF_SIZE,
@@ -21,7 +17,6 @@ from shared.envs import (
     SEPARATOR,
     CLIENT_REQUEST_INPUT,
 )
-from shared.fonts import APP_FONT
 from shared.constants import STATUS_SIGNAL, DAT_SIGNAL, get_prior_color
 from shared.command import show_help, get_command
 from utils.base import get_timestamp
@@ -29,50 +24,6 @@ from utils.logger import LogType, console_log
 from utils.files import render_file_list, extract_download_input, convert_file_size
 from utils.args import *
 from utils.gui import *
-
-
-class RichClient:
-    def __init__(self, *, files: list[tuple[str, int]] = []):
-        self.layout = Layout()
-        self.console = Console(width=160)
-        self.live = Live(self.layout, refresh_per_second=10, console=self.console)
-
-        self.layout.split_row(
-            Layout(name="download-process", ratio=1), Layout(name="resources", ratio=1)
-        )
-
-        self.rich_progress = RichProgress(
-            {},
-            layout=self.layout["download-process"],
-            console=self.console,
-            live=self.live,
-        )
-
-        self.rich_table = RichTable(
-            columns={
-                "No.": {
-                    "justify": "center",
-                    "style": "cyan",
-                    "no_wrap": True,
-                },
-                "Filename": {"justify": "left", "style": "magenta"},
-                "Size": {"justify": "right", "style": "green"},
-            },
-            rows=[],
-            layout=self.layout["resources"],
-            console=self.console,
-            live=self.live,
-        )
-
-        self.live.start(refresh=self.live._renderable is not None)
-
-        self.render_file_list(files)
-
-    def render_file_list(self, files: list[tuple[str, int]]):
-        __files = [list(file) for file in files]
-        print(__files)
-        self.rich_table.overwrite_rows(__files)
-        self.rich_table.layout_render()
 
 
 class BaseClient:
@@ -87,10 +38,7 @@ class BaseClient:
         self.rich_renderer = RichClient() if use_rich else None
 
         self.download_manager = ClientDownloadManager(
-            files=[],
-            rich_progress=(
-                self.rich_renderer.rich_progress if self.rich_renderer else None
-            ),
+            files=[], rich_client=self.rich_renderer
         )
 
         self.resources: dict[str, int] = {}
@@ -163,9 +111,20 @@ class BaseClient:
     def must_exit(self):
         return self.must_stop() or self.watch_signal.is_set()
 
-    def add_to_download(self, file: tuple[str, int, int]):
-        filename, chunk_sz, tot = file
-        self.download_manager.add_download(filename, chunk_sz, tot)
+    def add_to_download(
+        self,
+        *,
+        filename: str,
+        chunk_sz: int,
+        tot: int,
+        is_overwritten: bool = False,
+    ):
+        self.download_manager.add_download(
+            filename=filename,
+            chunk_sz=chunk_sz,
+            tot=tot,
+            is_overwritten=is_overwritten,
+        )
 
         if self.use_rich:
             self.download_manager.rich_progress.add_task(filename, chunk_sz, tot)
@@ -245,7 +204,7 @@ class BaseClient:
                         continue
 
                     if filename not in self.download_manager.download_list:
-                        self.download_manager.add_download(
+                        self.add_to_download(
                             filename=filename,
                             chunk_sz=chunk_sz,
                             tot=self.resources[filename],

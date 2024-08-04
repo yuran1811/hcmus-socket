@@ -150,6 +150,8 @@ class BaseServer:
             self.client_log(LogType.INFO, addr, "Connection closed!")
             try:
                 del self.addresses[conn]
+                self.updater["client"]() if self.updater["client"] else None
+
                 del self.download_manager[conn]
             except KeyError:
                 pass
@@ -167,6 +169,7 @@ class BaseServer:
             conn.close()
 
             del self.addresses[conn]
+            self.updater["client"]() if self.updater["client"] else None
         except SocketError:
             self.client_log(LogType.ERR, addr, "Connection is lost!")
         except Exception as e:

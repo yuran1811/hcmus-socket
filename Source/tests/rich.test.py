@@ -11,7 +11,7 @@ from classes import RichProgress, RichTable, Layout, Console, Live
 if __name__ == "__main__":
     layout = Layout()
     console = Console(width=160)
-    live = Live(layout, refresh_per_second=10, console=console)
+    live = Live(layout, refresh_per_second=6, console=console)
 
     layout.split_row(
         Layout(name="progress", ratio=1), Layout(name="resources", ratio=1)
@@ -32,13 +32,16 @@ if __name__ == "__main__":
         ["Dec 15, 2017", "Star Wars Ep. V111: The Last Jedi", "$1,332,539,889"],
         ["Dec 16, 2016", "Rogue One: A Star Wars Story", "$1,332,439"],
     ]
+
     rich_table = RichTable(
         columns=columns,
-        rows=rows,
+        rows=[],
         layout=layout["resources"],
         console=console,
         live=live,
     )
+    rich_table.overwrite_rows(rows)
+    rich_table.layout_render()
 
     rich_progress = RichProgress(
         {"file1": (3, 65), "file2": (2, 41), "file3": (4, 100)},
@@ -65,6 +68,17 @@ if __name__ == "__main__":
                             "Dec 20, 2019",
                             "Star Wars: The Rise of Skywalker",
                             "$952,110,690",
+                        ]
+                    )
+
+                if len(rich_table.table.rows) > 4:
+                    rich_table.overwrite_rows(
+                        [
+                            [
+                                "Dec 20, 2019",
+                                "Star Wars: The Rise of Skywalker",
+                                "$952,110,690",
+                            ]
                         ]
                     )
                 rich_table.layout_render()

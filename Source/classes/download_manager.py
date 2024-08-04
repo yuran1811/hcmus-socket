@@ -1,7 +1,7 @@
 from sys import stdout
 from typing import TypeVar, Generic
 
-from .rich_progress import RichProgress
+from .rich_client import RichClient, RichProgress
 from utils.logger import LogType, console_log
 from utils.files import get_resource_path, get_download_path, get_downloaded_list
 
@@ -148,12 +148,17 @@ class DownloadManager(Generic[T]):
 
 
 class ClientDownloadManager(DownloadManager[ClientFileDownloader]):
-    def __init__(self, *, rich_progress: RichProgress = None, **kwargs):
+    def __init__(self, *, rich_client: RichClient = None, **kwargs):
         super().__init__(**kwargs)
 
-        self.rich_progress = rich_progress
+        self.rich_client: RichClient = rich_client
+        self.rich_progress: RichProgress = (
+            rich_client.rich_progress if rich_client else None
+        )
         self.rich_progress_render = (
-            rich_progress.display_progress_with_title() if rich_progress else None
+            self.rich_progress.display_progress_with_title()
+            if self.rich_progress
+            else None
         )
 
         self.exists.update(get_downloaded_list())
