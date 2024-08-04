@@ -3,6 +3,9 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+
+VERSION = getenv("VERSION") or "no version info"
+
 # Socket config
 HOST = getenv("HOST") or "127.0.0.1"
 PORT = int(getenv("PORT")) or 1811

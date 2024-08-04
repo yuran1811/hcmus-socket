@@ -11,6 +11,7 @@ from socket import (
 
 from classes import ClientDownloadManager, RichClient
 from shared.envs import (
+    VERSION,
     ADDR,
     MAX_BUF_SIZE,
     ENCODING_FORMAT,
@@ -33,6 +34,7 @@ class BaseClient:
 
         self.is_shutdown = False
         self.interval = 2
+        self.conn_timeout = 10
         self.exception_catch = None
 
         self.rich_renderer = RichClient() if use_rich else None
@@ -659,12 +661,17 @@ if __name__ == "__main__":
     args = parse_args(
         prog="Socket Client",
         desc="A simple socket client for downloading files",
-        wrappers=[with_part1_arg, with_gui_arg, with_rich_arg],
+        wrappers=[with_gui_arg, with_rich_arg, with_part1_arg, with_version_arg],
     )
 
-    use_part1 = args.part1
-    use_rich = args.rich
     use_gui = args.gui
+    use_rich = args.rich
+    use_part1 = args.part1
+    use_version = args.version
+
+    if use_version:
+        print(f"Socket Client v{VERSION}")
+        exit()
 
     print("--part1 detected, using part1 version") if use_part1 else None
     print("--gui detected, using GUI version") if use_gui else None
