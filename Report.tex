@@ -74,20 +74,20 @@
   \renewcommand{\arraystretch}{1.5}
   \begin{tabular}{|c|p{\dimexpr0.6\linewidth-\tabcolsep}|c|}
     \hline
-    \textbf{STT} & \textbf{Yêu cầu}                                                                                         & \textbf{Tiến độ}                        \\\hline
-    \multicolumn{3}{|c|}{\textbf{Phần I}}                                                                                                                                                \\\hline
-    1            & Client có thể nhận được danh sách các file từ Server và ctrl-c                                           & 100\%             \\\hline
-    2            & Client có thể nhận lần lượt từng file thành công từ Server. Server có thể gửi file thành công tới Client & 100\%             \\\hline
-    3            & Hiển thị percent download file và phát hiện những file cần download tiếp theo                            & 100\%             \\\hline
-    \multicolumn{3}{|c|}{\textbf{Phần II}}                                                                                                                                               \\\hline
-    4            & Client có thể nhận được danh sách các file từ Server và ctrl-c                                           & 100\%             \\\hline
-    5            & 2s quét file input.txt 1 lần                                                                             & 100\%             \\\hline
-    6            & Hiển thị phần trăm download files                                                                       & 100\%             \\\hline
-    7            & Client có thể nhận files thành công từ Server. Tập tin sau khi download phải đúng và đủ dung lượng       & 100\%             \\\hline
-    8            & Độ ưu tiên CRITICAL, HIGH, NORMAL                                                                        & 100\%             \\\hline
-    \multicolumn{3}{|c|}{\textbf{Tổng kết báo cáo}}                                                                                                                                      \\
-    \multicolumn{3}{|c|}{\textsl{Hoàn thành 100\% yêu cầu đồ án}}                                                                                                                        \\
-    \multicolumn{3}{|c|}{\textsl{Không xảy ra lỗi khi vận hành chương trình}}                                                                                                            \\\hline
+    \textbf{STT} & \textbf{Yêu cầu}                                                                                         & \textbf{Tiến độ} \\\hline
+    \multicolumn{3}{|c|}{\textbf{Phần I}}                                                                                                      \\\hline
+    1            & Client có thể nhận được danh sách các file từ Server và ctrl-c                                           & 100\%            \\\hline
+    2            & Client có thể nhận lần lượt từng file thành công từ Server. Server có thể gửi file thành công tới Client & 100\%            \\\hline
+    3            & Hiển thị percent download file và phát hiện những file cần download tiếp theo                            & 100\%            \\\hline
+    \multicolumn{3}{|c|}{\textbf{Phần II}}                                                                                                     \\\hline
+    4            & Client có thể nhận được danh sách các file từ Server và ctrl-c                                           & 100\%            \\\hline
+    5            & 2s quét file input.txt 1 lần                                                                             & 100\%            \\\hline
+    6            & Hiển thị phần trăm download files                                                                        & 100\%            \\\hline
+    7            & Client có thể nhận files thành công từ Server. Tập tin sau khi download phải đúng và đủ dung lượng       & 100\%            \\\hline
+    8            & Độ ưu tiên CRITICAL, HIGH, NORMAL                                                                        & 100\%            \\\hline
+    \multicolumn{3}{|c|}{\textbf{Tổng kết báo cáo}}                                                                                            \\
+    \multicolumn{3}{|c|}{\textsl{Hoàn thành 100\% yêu cầu đồ án}}                                                                              \\
+    \multicolumn{3}{|c|}{\textsl{Không xảy ra lỗi khi vận hành chương trình}}                                                                  \\\hline
   \end{tabular}
 \end{center}
 
@@ -207,7 +207,7 @@
                           \item Chờ nhận thông điệp từ Client và tiến hành tải file
                                 \begin{itemize}
                                   \item Gửi dữ liệu file dưới dạng \verb|bytes| cho Client
-                                  \item Nếu trong quá trình nhận dữ liệu, nhận được lệnh \verb|quit| từ Client \(\Rightarrow \) Kết thúc phiên chạy của Client Socket tương ứng bên Server
+                                  \item Trong quá trình nhận dữ liệu, nếu nhận được lệnh \verb|quit| từ Client \(\Rightarrow \) Kết thúc phiên chạy của Client Socket tương ứng bên Server
                                 \end{itemize}
                         \end{enumerate}
                 \end{itemize}
@@ -299,37 +299,27 @@
   \renewcommand{\arraystretch}{1.5}
   \begin{tabular}{|c|p{\dimexpr0.6\linewidth-2\tabcolsep}|c|}
     \hline
-    \textbf{STT} & \textbf{Công việc}                                                                                         & \textbf{Người thực hiện} \\\hline
-    1            & Viết báo cáo                                                                             & Khoa, Xuân               \\\hline
-    2            & Kiểm thử phần mềm (kiểm tra các tính năng và rà soát lỗi)                                     & Xuân               \\\hline
-    3            & Thiết kế mẫu giao diện                                                                         & Xuân               \\\hline
-    4            & Tích hợp commandline interface                                                                & Xuân               \\\hline
-    5            & Vẽ biểu đồ kịch bản giao tiếp giữa Client và Server                                                & Xuân               \\\hline
-    6            & Lấy danh sách tài nguyên và hiển thị danh sách file hiện có bên Server       & Khoa             \\\hline
-    7            & Lấy kích thước, đường dẫn tới file                                                                       & Khoa             \\\hline
-    8            & Lấy danh sách file cần tải từ input.txt (Client)                                             & Khoa             \\\hline
-    9            & Lấy dữ liệu, kích thước, đường dẫn của các tài nguyên (Server)                                       & Khoa             \\\hline
-    10           & Trích xuất thông tin từ file input.txt, xử lí độ ưu tiên tải (CRIT, HIGH, NORM)                                    & Khoa             \\\hline
-    11           & Tạo các thành phần (khung, thanh cuộn, khung chữ, check box, ...) cho giao diện đồ họa                               & Khoa             \\\hline
-    12           & Tạo tên nhãn, ghi chữ, tạo nút cho giao diện                                                      & Khoa             \\\hline
-    13           & Tạo thanh tiến trình, bảng điều khiển, cấu hình khung cho giao diện                           & Khoa             \\\hline
-    14           & Ghi log vào console và file để theo dõi quá trình thực thi                & Khoa             \\\hline
-    15           & Theo dõi sự thay đổi trong thư mục "resources"~(thêm mới, chỉnh sửa file tài nguyên) và tiến hành cập nhật file `resources.json` (file chứa thông tin về các tài nguyên như tên file, dung lượng và đường dẫn) & Khoa             \\\hline
-    16           & Xử lí các exception (ngoại lệ)                & Khoa             \\\hline
-    17           & Gửi tín hiệu để xác định trạng thái kết nối (Server và Client)         & Khoa             \\\hline
-    18           & Xử lí thoát và dừng khi có tín hiệu tương ứng              & Khoa             \\\hline
-    19           & Bộ đếm ngược thời gian chờ kết nối đến Server                & Khoa             \\\hline
-    \end{tabular}
-\pagebreak
-\begin{tabular}{|c|p{\dimexpr0.6\linewidth-2\tabcolsep}|c|}
-    \hline
-    \textbf{STT} & \textbf{Công việc} & \textbf{Người thực hiện} \\\hline
-    20           & Xử lí tải file                 & Khoa             \\\hline
-    21           & Tạo giao diện (gui) cho Client               & Khoa             \\\hline
-    22           & Tạo giao diện (gui) cho Server               & Khoa             \\\hline
-    23           & Server xử lí tín hiệu từ Client và hoạt động theo lệnh commandline               & Khoa             \\\hline
-    24           & Client nhận dữ liệu từ Server theo từng chunk đã xử lí             & Khoa
-    \\\hline
+    \textbf{STT} & \textbf{Công việc}                                                                                                                                                                                                  & \textbf{Người thực hiện} \\\hline
+    1            & Viết báo cáo                                                                                                                                                                                                        & Khoa, Xuân               \\\hline
+    2            & Kiểm thử phần mềm (kiểm tra các tính năng và rà soát lỗi)                                                                                                                                                           & Xuân                     \\\hline
+    3            & Thiết kế mẫu giao diện                                                                                                                                                                                              & Xuân                     \\\hline
+    4            & Tích hợp command line interface                                                                                                                                                                                     & Xuân                     \\\hline
+    5            & Vẽ biểu đồ kịch bản giao tiếp giữa Client và Server                                                                                                                                                                 & Xuân                     \\\hline
+    6            & Lấy dữ liệu, kích thước, đường dẫn của các tài nguyên (Server)                                                                                                                                                      & Xuân                     \\\hline
+    7            & Lấy danh sách tài nguyên và hiển thị danh sách file hiện có bên Server                                                                                                                                              & Khoa                     \\\hline
+    8            & Lấy danh sách file cần tải từ input.txt (Client)                                                                                                                                                                    & Xuân                     \\\hline
+    9            & Trích xuất thông tin từ file input.txt, xử lí độ ưu tiên tải (CRIT, HIGH, NORM)                                                                                                                                     & Xuân                     \\\hline
+    10           & Tạo các thành phần (khung, thanh cuộn, khung chữ, check box, \ldots) cho giao diện đồ họa                                                                                                                           & Khoa                     \\\hline
+    11           & Tạo thanh tiến trình, bảng điều khiển, cấu hình khung cho giao diện                                                                                                                                                 & Khoa                     \\\hline
+    12           & Bộ đếm ngược thời gian chờ kết nối đến Server                                                                                                                                                                       & Khoa                     \\\hline
+    13           & Theo dõi sự thay đổi trong thư mục `resources' (thêm mới, chỉnh sửa file tài nguyên) và tiến hành cập nhật file \verb|resources.json| (file chứa thông tin về các tài nguyên như tên file, dung lượng và đường dẫn) & Khoa                     \\\hline
+    14           & Gửi tín hiệu để xác định trạng thái kết nối (Server và Client)                                                                                                                                                      & Khoa                     \\\hline
+    15           & Xử lí thoát và dừng khi có tín hiệu tương ứng                                                                                                                                                                       & Khoa                     \\\hline
+    16           & Xử lí tải file                                                                                                                                                                                                      & Khoa                     \\\hline
+    17           & Xử lí các exception (ngoại lệ)                                                                                                                                                                                      & Khoa                     \\\hline
+    18           & Client nhận dữ liệu từ Server theo từng chunk                                                                                                                                                                       & Khoa                     \\\hline
+    19           & Tạo giao diện (gui) cho Server và Client                                                                                                                                                                            & Khoa                     \\\hline
+    20           & Server xử lí tín hiệu từ Client                                                                                                                                                                                     & Khoa                     \\\hline
   \end{tabular}
 \end{center}
 
