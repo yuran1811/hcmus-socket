@@ -12,7 +12,7 @@ class RichClient:
         self, *, files: list[tuple[str, int]] = [], table_title: str = "Rich Table"
     ):
         self.layout = Layout()
-        self.console = Console(width=160)
+        self.console = Console(width=120)
         self.live = Live(self.layout, console=self.console, refresh_per_second=6)
 
         self.layout.split_row(

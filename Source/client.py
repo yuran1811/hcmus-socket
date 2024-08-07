@@ -22,7 +22,12 @@ from shared.constants import STATUS_SIGNAL, DAT_SIGNAL, get_prior_color
 from shared.command import show_help, get_command
 from utils.base import get_timestamp, stable_render
 from utils.logger import LogType, console_log
-from utils.files import render_file_list, extract_download_input, convert_file_size
+from utils.files import (
+    render_file_list,
+    extract_download_input,
+    convert_file_size,
+    init_download_input,
+)
 from utils.args import *
 from utils.gui import *
 
@@ -150,6 +155,8 @@ class BaseClient:
     def update_status(self):
         if self.must_exit():
             return
+
+        init_download_input()
 
         with open(CLIENT_REQUEST_INPUT, "r") as f:
             for line in f:

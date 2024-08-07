@@ -81,6 +81,12 @@ def extract_download_input(line: str):
     return "", 0
 
 
+def init_download_input():
+    if not os.path.exists(CLIENT_REQUEST_INPUT):
+        with open(CLIENT_REQUEST_INPUT, "w"):
+            pass
+
+
 def get_to_download_list(res_list: dict[str, tuple[int, str]]):
     with open(CLIENT_REQUEST_INPUT, "r") as f:
         downloads: list[tuple[str, int, int]] = []
