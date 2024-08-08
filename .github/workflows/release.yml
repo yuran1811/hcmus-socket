@@ -16,8 +16,8 @@ jobs:
 
       - name: Zip folder
         run: |
-          mkdir 23127065_23127524 \
-          cp -r Source/ Report.pdf ./23127065_23127524/ \
+          mkdir 23127065_23127524
+          cp -r Source/ Report.pdf ./23127065_23127524/
           zip -9 -r 23127065_23127524.zip . -i "23127065_23127524/*"
 
       - name: Generate release tag
