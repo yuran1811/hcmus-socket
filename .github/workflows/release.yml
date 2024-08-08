@@ -14,8 +14,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Zip Folder
-        run: zip -9 -r 23127065_23127524.zip . -i "Source/*" "Report.pdf"
+      - name: Zip folder
+        run: |
+          mkdir 23127065_23127524
+          cp -r Source/ Report.pdf ./23127065_23127524/
+          zip -9 -r 23127065_23127524.zip . -i "23127065_23127524/*"
 
       - name: Generate release tag
         id: generate_release_tag
