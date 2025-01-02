@@ -19,3 +19,23 @@
 ## Releases
 
 - See the latest version [here](https://github.com/yuran1811/hcmus-socket/releases)
+
+## App Screenshots
+
+### Console UI
+
+<div style="display:flex">
+    <img src="Screenshots/client-console.png" alt="client-console.png" style="width: 45%;">
+    <img src="Screenshots/server-console.png" alt="server-console.png" style="width: 45%;">
+</div>
+
+### GUI with customtkinter
+
+<div style="display:flex">
+    <img src="Screenshots/client-gui.png" alt="client-gui.png" style="width: 45%;">
+    <img src="Screenshots/server-gui.png" alt="server-gui.png" style="width: 45%;">
+</div>
+
+### Rich UI
+
+![client_rich](Screenshots/client-rich.png)
